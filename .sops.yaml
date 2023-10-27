@@ -1,0 +1,3 @@
+creation_rules:
+  - path_regex: (secrets.yaml|secrets.yml|secrets.yml.enc|secrets.yaml.enc)$
+    kms: 'arn:aws:kms:us-east-1:500480925365:alias/base_kms_key'
