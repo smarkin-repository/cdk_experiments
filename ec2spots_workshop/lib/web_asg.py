@@ -20,6 +20,7 @@ import boto3
 
 from operator import itemgetter
 from typing import List, Dict
+import json
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -37,6 +38,8 @@ class WebProps:
     max_capacity: int=1
     desired_capacity: int=0
     ami_image: str=None
+    domain_name: str=None
+    record_name: str=None
 
 class WebAsg(Construct):
 
@@ -73,14 +76,26 @@ class WebAsg(Construct):
             role_name=f"{self._prefix}-instance-role-ssm-policy",
             assumed_by=iam.ServicePrincipal("ec2.amazonaws.com")
         )
-
         instance_role.add_managed_policy(
             iam.ManagedPolicy.from_aws_managed_policy_name(
                 "AmazonSSMManagedInstanceCore")
         )
+        # read Policy Document from a json file
+        policy_document = iam.PolicyDocument.from_json(
+            json.load(open(os.path.join(dirname, "../data/policy", "ec2_policy.json")))
+        )
+        policy = iam.Policy(
+            self, f"{self._prefix.upper()}-EC2-Policy",
+            document=policy_document
+        )
+        # manager_policy
+        # Attach Policy Document to Instance Role
+        instance_role.attach_inline_policy(policy)
+        
+        # instance_role.
         return instance_role
 
-    def _create_securety_group(self, vpc, public_ip_addresses):
+    def _create_securety_group(self, vpc, port, allow_ip_addresses):
         sg_instance = ec2.SecurityGroup(
             self, f"{self._prefix.upper()}-SecurityGroup",
             vpc=vpc,
@@ -89,10 +104,10 @@ class WebAsg(Construct):
         )
 
 
-        for ip_address in public_ip_addresses:
+        for ip_address in allow_ip_addresses:
             sg_instance.add_ingress_rule(
                 peer=ec2.Peer.ipv4(ip_address),
-                connection=ec2.Port.tcp(443)
+                connection=ec2.Port.tcp(port)
             )
         return sg_instance
     
@@ -107,7 +122,7 @@ class WebAsg(Construct):
     def _create_asg_template(
             self, 
             iam_role, 
-            instance_profile, 
+            # instance_profile, 
             securety_group, 
             instance_type, 
             ami_image):
@@ -144,25 +159,56 @@ class WebAsg(Construct):
             user_data = f.read()
         return ec2.UserData.custom(user_data)
 
-    def _asset_user_data(self, asg):
-        # Script in S3 as Asset
-        asset = Asset.Asset(
-            self, f"{self._prefix}-asset",
-            path=os.path.join(dirname, "../scripts/user_data.sh")
-        )
+    # def _asset_user_data(self, asg):
+    #     # Script in S3 as Asset
+    #     asset = Asset.Asset(
+    #         self, f"{self._prefix}-asset",
+    #         path=os.path.join(dirname, "../scripts/user_data.sh")
+    #     )
 
-        local_path = asg.user_data.add_s3_download_command(
-            bucket=asset.bucket,
-            bucket_key=asset.s3_object_key
-        )
+    #     local_path = asg.user_data.add_s3_download_command(
+    #         bucket=asset.bucket,
+    #         bucket_key=asset.s3_object_key
+    #     )
 
-        # User data executes scripts from s3
-        asg.user_data.add_execute_file_command(
-            file_path=local_path
-        )
+    #     # User data executes scripts from s3
+    #     asg.user_data.add_execute_file_command(
+    #         file_path=local_path
+    #     )
 
-        asset.grant_read(self._instance_role)
-        return asset
+    #     asset.grant_read(self._instance_role)
+        # return asset
+
+    
+    def _asset_user_data(self, asg, script_paths: List[str]):
+        """
+        Create an asset for each script in the list
+        """
+        assets = []
+        for script_path in script_paths:
+            asset = Asset.Asset(
+                self, f"{self._prefix}-asset",
+                path=script_path
+            )
+
+            local_path = asg.user_data.add_s3_download_command(
+                bucket=asset.bucket,
+                bucket_key=asset.s3_object_key
+            )
+
+            assets.append(asset)
+
+        # Add commands to execute downloaded scripts
+        for asset in assets:
+            asg.user_data.add_execute_file_command(
+                file_path=local_path
+            )
+
+        # Grant read permissions for all assets to the instance role
+        for asset in assets:
+            asset.grant_read(self._instance_role)
+
+        return assets
     
     def _create_asg(
             self, props: WebProps,
@@ -181,20 +227,25 @@ class WebAsg(Construct):
             max_capacity=props.max_capacity,
             desired_capacity=props.desired_capacity,
             mixed_instances_policy=mixed_instances_policy,
-            # user_data=self._get_user_data("../scripts/user_data.sh"),
         )
         
-
+    def asset_user_data(self, data_path: str):
+        script_paths=[]
+        script_paths.append(
+            os.path.join(dirname, f"{data_path}/user_data.sh"))
+        return self._asset_user_data(self._asg, script_paths)
+    
     def create_asg(self, props: WebProps=None):
         if props is None:
             props = self.props
 
         self._instance_role = self._create_instance_role()
         self._create_instance_profile = self._create_instance_profile([self._instance_role.role_name])
-        self._sg_instance = self._create_securety_group(props.vpc, [get_my_external_ip()])
+        self._sg_instance = self._create_securety_group(
+            props.vpc, port=8080, allow_ip_addresses=[get_my_external_ip(), props.vpc.vpc_cidr_block])
         self._launch_template = self._create_asg_template(
             iam_role=self._instance_role
-            , instance_profile=self._create_instance_profile
+            # , instance_profile=self._create_instance_profile
             , securety_group=self._sg_instance
             , instance_type=props.instance_type
             , ami_image=props.ami_image
@@ -207,7 +258,6 @@ class WebAsg(Construct):
             launch_template=self._launch_template,
             securety_group=self._sg_instance
         )
-        self._asset_user_data(self._asg)
 
     def __init__(
             self,

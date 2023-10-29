@@ -23,6 +23,9 @@ import boto3
 
 from operator import itemgetter
 from typing import List, Dict
+from .utils import get_my_external_ip
+
+
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -45,6 +48,15 @@ class BaseNetworkEnv(Construct):
     @property
     def vpc(self):
         return self._vpc
+    
+    @property 
+    def alb(self):
+        return self._alb
+
+    @property
+    def sg_alb(self):
+        return self._sg_alb
+
     
     def _create_vpc(
             self, id: str, 
@@ -89,47 +101,80 @@ class BaseNetworkEnv(Construct):
             validation=acm.CertificateValidation.from_dns(hosted_zone)
         )
     
-    # create listner for alb 
-    def _create_listener(
-            self, id: str, alb: elbv2.ApplicationLoadBalancer, 
-            certificate: acm.Certificate, 
-            port: int, 
-            protocol: elbv2.ApplicationProtocol, 
-            target_group: elbv2.ApplicationTargetGroup,
-            **kwargs
-        ) -> elbv2.ApplicationListener:
-        return alb.add_listener(
-            id=id,
+    def _creaet_listener_http(self, alb, port):
+        return elbv2.ApplicationListener(
+            self, f"{self._prefix.upper()}-ALB-Listener",
+            load_balancer=alb,
             port=port,
-            open=True,
-            certificates=[elbv2.ListenerCertificate.from_certificate_manager(certificate)],
-            default_action=elbv2.ListenerAction.forward(target_groups=[target_group])
+            protocol=elbv2.ApplicationProtocol.HTTP,
         )
-        
 
-    def _create_alb(self, id:str, prefix:str, certificate: acm.Certificate, internet_facing: bool=False) -> elbv2.ApplicationLoadBalancer:
+    def _create_target_group_https_for_asg(
+            self, vpc, targets: list, port: int, health_check: elbv2.HealthCheck):
+        return elbv2.ApplicationTargetGroup(
+            self, f"{self._prefix.upper()}-ALB-TargetGroup",
+            port=port,
+            vpc=vpc,  
+            target_group_name=f"{self._prefix.upper()}-workshop-tg",
+            targets=targets,
+            target_type=elbv2.TargetType.INSTANCE,
+            protocol=elbv2.ApplicationProtocol.HTTPS,
+            health_check = health_check
+        )
+    
+    def _create_target_group_http_for_asg(
+            self, vpc, targets: list, port: int, path_hc: str):
+        return elbv2.ApplicationTargetGroup(
+            self, f"{self._prefix.upper()}-ALB-TargetGroup",
+            port=port, # 
+            vpc=vpc,  
+            target_group_name=f"{self._prefix.upper()}-workshop-tg",
+            targets=targets,
+            target_type=elbv2.TargetType.INSTANCE,
+            protocol=elbv2.ApplicationProtocol.HTTP,
+            health_check = self._create_health_check_target(port=str(port), path="/")
+        )
+    
+    def _create_securety_group_ingress(self, vpc, ports: list, allow_cidrs: list):
+        sg_alb = self._create_securety_group(
+            vpc=vpc
+        )
+        for port in ports:
+            for ip_address in allow_cidrs:
+                sg_alb.add_ingress_rule(
+                    peer=ec2.Peer.ipv4(ip_address),
+                    connection=ec2.Port.tcp(port)
+                )
+        return sg_alb
+    
+    def _create_health_check_target(self, port:str, path:str):
+        return elbv2.HealthCheck(
+                interval=Duration.seconds(60),
+                port=port,
+                path=path,
+                timeout=Duration.seconds(5)
+            )
+
+    def _create_alb(self, id:str, prefix:str, internet_facing: bool=False) -> elbv2.ApplicationLoadBalancer:
         """
             Create simple application load balancer with AWS SSL certificats
         """
-        alb = elbv2.ApplicationLoadBalancer(
+        return elbv2.ApplicationLoadBalancer(
             self, id,
             vpc=self._vpc,
             internet_facing=internet_facing,
             load_balancer_name=f"{prefix}-workshop-alb",
-            security_group=self.sg_default,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
         )        
         # let's check may be neccesary replace this method
-        listerner_redirect = alb.add_redirect(
-            source_port=80,
-            target_port=443,
-            source_protocol=elbv2.ApplicationProtocol.HTTP,
-            target_protocol=elbv2.ApplicationProtocol.HTTPS,
-            open=True
-        )
-        return alb
-
-
+        # listerner_redirect = alb.add_redirect(
+        #     source_port=80,
+        #     target_port=443,
+        #     source_protocol=elbv2.ApplicationProtocol.HTTP,
+        #     target_protocol=elbv2.ApplicationProtocol.HTTPS,
+        #     open=True
+        # )
+        # return alb
 
     def get_SG_default(self, id):
         return ec2.SecurityGroup.from_security_group_id(
@@ -162,46 +207,58 @@ class BaseNetworkEnv(Construct):
         )
 
     # TODO replace hardcoded values with props
-    def create_alb(self):
-        self._acm_cert = self._create_acm_certificate(
-            zone_name="Z0764436UNSJQPH92RK7", #"taloni.link",
-            domain_name="test.taloni.link",
-            subjects=["test.taloni.link"]
-        )
+    def create_alb_with_connect_http_to(self, asg, port, port_target, internet_facing=True):
         self._alb = self._create_alb(
             id=f"{self._prefix.upper()}-ALB",
             prefix=self._prefix,
-            internet_facing=False,
-            certificate=self._acm_cert
+            internet_facing=internet_facing,
         )
-        self._listener = self._alb.add_listener(
-            id=f"{self._prefix.upper()}-ALB-Listener",
-            port=443,
-            certificates=[self._acm_cert]
+        self._sg_alb = self._create_securety_group_ingress(
+            vpc=self._vpc,
+            ports=[port],
+            allow_cidrs=[self._vpc.vpc_cidr_block, get_my_external_ip()]
         )
+
+        self._target_group = self._create_target_group_http_for_asg(
+            vpc=self._vpc,
+            targets=[asg],
+            port=port_target,
+            path_hc='/'
+        )
+
+        self._listener = self._creaet_listener_http(self._alb, port)
         
-    def add_target_group_for_alb(self, target: list, port: int):
-        self._target_group = elbv2.ApplicationTargetGroup(
-            self, f"{self._prefix.upper()}-ALB-TargetGroup",
-            port=port, # 
-            # open=True,
-            # certificates=[self._acm_cert],
-            vpc=self._vpc,  
-            target_group_name=f"{self._prefix.upper()}-workshop-tg",
-            targets=[target],
-            target_type=elbv2.TargetType.INSTANCE,
-            protocol=elbv2.ApplicationProtocol.HTTPS,
-            health_check = elbv2.HealthCheck(
-                interval=Duration.seconds(60),
-                path="/",
-                timeout=Duration.seconds(5)
-            )
-        )
+
         self._listener.add_target_groups(
             id=f"{self._prefix.upper()}-ALB-Listener",
             target_groups=[self._target_group]
         )
-        
+
+        self._alb.add_security_group(self._sg_alb)
+
+
+    def create_alb_with_connect_https_to(self, port, internet_facing=True):
+        self._acm_cert = self._create_acm_certificate(
+            zone_name="Z0764436UNSJQPH92RK7", #"taloni.link",
+            domain_name="test.taloni.link",
+            subjects=["*.taloni.link"]
+        )
+        self._alb = self._create_alb(
+            id=f"{self._prefix.upper()}-ALB",
+            prefix=self._prefix,
+            internet_facing=internet_facing,
+        )
+
+    def _create_securety_group(self, vpc):
+        sg_alb = ec2.SecurityGroup(
+            self, f"{self._prefix.upper()}-SG-ALB",
+            vpc=vpc,
+            allow_all_outbound=True,
+            security_group_name=f"{self._prefix}-sg-alb"
+        )
+        return sg_alb
+
+
     def __init__(
             self,
             scope: Construct,

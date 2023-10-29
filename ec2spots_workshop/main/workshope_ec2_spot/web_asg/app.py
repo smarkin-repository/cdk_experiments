@@ -33,7 +33,7 @@ app = core.App()
 
 # create and fill EnvPro
 env_props = EnvProps(
-    env=env,
+    env=env, # It doen't need any more
     prefix="workshop",
     cidr_block="172.30.0.0/24",
     propertis={
@@ -44,12 +44,12 @@ env_props = EnvProps(
 )
 
 ami_image = utils.get_latest_linux_ami_from_aws(
-        region=env.region
-        , pattern={
+    region=env.region
+    , pattern={
             "owner" : "amazon",
             "architecture" : "x86_64",
             "name" : "amzn2-ami-hvm-*"
-        }
+    }
 )
 
 web_props = WebProps(
@@ -63,12 +63,15 @@ web_props = WebProps(
     , max_capacity=2
     , desired_capacity=1
     , ami_image=ami_image
+    , domain_name="taloni.link"
+    , record_name="test"
 )
 
 test_stack = WorkshopWebAsgStack(
     app, f"{web_props.prefix.upper()}-WebASGStack"
     , env_props=env_props 
     , props=web_props
+    , env = env
 )
 stacks.append(test_stack)
 

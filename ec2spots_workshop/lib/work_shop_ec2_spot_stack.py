@@ -9,6 +9,8 @@ from constructs import Construct
 from .base_network  import BaseNetworkEnv, EnvProps
 from .ec2_spot import EC2Spot, EC2Props
 from .web_asg import WebAsg, WebProps
+from .route53 import R53
+from .utils import get_my_external_ip
 
 class WorkshopEC2SpotStack(Stack):
     # TODO list mixed instance policy
@@ -34,21 +36,31 @@ class WorkshopEC2SpotStack(Stack):
 
 class WorkshopWebAsgStack(Stack):
     # TODO list
-    # - пока трафик не идет черех ALB, попробовать через HTTP и пробросить cirdr_block от vpc
-    # - allow traffic from ALB to ASG only + specific IPs
-    # - setup web applicaiont on port 8080
-    # - refactoring structure of project
+    # Works well for HTTP, but still need to improve for HTTPS
+    # - replace account/region/env_props with env
+    # - write tests
+    # - next step ssm-stress.json
+    # - aws ssm send-command --cli-input-json file://ssm-stress.json
+    # -* support https protocol
     
     def __init__(self, scope: Construct, construct_id: str, env_props: EnvProps, props: WebProps, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-        base_env = BaseNetworkEnv(self, f"${env_props.prefix}-base-network-env", env_props)
+        base_env = BaseNetworkEnv(self, f"{env_props.prefix}-base-network-env", env_props)
         base_env.create_ssm_endpoint()
-        base_env.create_alb()
         props.vpc = base_env.vpc
-        web_asg = WebAsg(self, f"${props.prefix}-web-asg-stack", props )
+        web_asg = WebAsg(self, f"{props.prefix}-web-asg-stack", props )
         web_asg.create_asg()
-        base_env.add_target_group_for_alb(
-            web_asg.asg, port=8080
+        base_env.create_alb_with_connect_http_to(
+            asg=web_asg.asg,
+            port=80,
+            port_target=8080,
+            internet_facing=True
         )
-
+        web_asg.asset_user_data(data_path="../data/scripts")
+        route53 = R53(self, f"{env_props.prefix}-route53", env_props.prefix)
+        route53.create_arecord(
+            domain_name=props.domain_name,
+            record_name=props.record_name,
+            target=base_env.alb
+        )
         # The code that defines your stack goes here
