@@ -39,8 +39,8 @@ class TTLProps:
     prefix_name: str
     stack_names: list
     ttl: int
-    account: str
-    region: str
+    account: str=None
+    region: str=None
 
 class TTL(Construct):
     def __init__(self, scope: Construct, id: str, props: TTLProps, **kwargs) -> None:
@@ -110,7 +110,8 @@ class TTLStack(Stack):
 
         # add self name to the list of stacks on termination
         props.stack_names.append(self.stack_name)
-
+        props.region = self.region
+        props.account = self.account
         self._ttl = TTL(
             self, f"{construct_id}",
             props=props
@@ -120,7 +121,8 @@ class TTLStack(Stack):
 def ttl_termination_stack_factory(
         scope: Construct, construct_id: str, 
         ttl_props: TTLProps,
-        stacks: list
+        stacks: list,
+        env
     ):
     # add all stacks names to ttl_props if it doesn't have terminition protection
 
@@ -136,5 +138,6 @@ def ttl_termination_stack_factory(
     return TTLStack(
         scope=scope,
         construct_id=construct_id,
-        props=ttl_props
+        props=ttl_props,
+        env=env
     )

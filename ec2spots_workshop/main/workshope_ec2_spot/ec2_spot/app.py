@@ -33,6 +33,15 @@ tags = {
 
 app = core.App()
 
+
+@dataclass
+class EnvProps:
+    cidr_block: str
+    prefix: str
+    env: core.Environment
+    propertis: Dict
+
+
 # create and fill EnvPro
 env_props = EnvProps(
     env=env,

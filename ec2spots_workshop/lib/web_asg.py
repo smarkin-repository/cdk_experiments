@@ -10,7 +10,7 @@ from aws_cdk import (
     aws_s3_assets as Asset
 )
 from constructs import Construct
-from dataclasses import dataclass
+from .props import WebAsgProps
 from .utils import get_my_external_ip, get_latest_linux_ami_from_aws
 
 import os
@@ -27,19 +27,6 @@ log = logging.getLogger(__name__)
 
 dirname = os.path.dirname(__file__)
 
-
-@dataclass
-class WebProps:
-    prefix: str
-    vpc: ec2.Vpc=None
-    spot_types: List[str]=None
-    instance_type: str=None
-    min_capacity: int=0
-    max_capacity: int=1
-    desired_capacity: int=0
-    ami_image: str=None
-    domain_name: str=None
-    record_name: str=None
 
 class WebAsg(Construct):
 
@@ -211,7 +198,7 @@ class WebAsg(Construct):
         return assets
     
     def _create_asg(
-            self, props: WebProps,
+            self, props: WebAsgProps,
             launch_template,
             mixed_instances_policy,
             securety_group
@@ -235,7 +222,7 @@ class WebAsg(Construct):
             os.path.join(dirname, f"{data_path}/user_data.sh"))
         return self._asset_user_data(self._asg, script_paths)
     
-    def create_asg(self, props: WebProps=None):
+    def create_asg(self, props: WebAsgProps=None):
         if props is None:
             props = self.props
 
@@ -263,7 +250,7 @@ class WebAsg(Construct):
             self,
             scope: Construct,
             construct_id: str,
-            props: WebProps,
+            props: WebAsgProps,
             **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         self._prefix = props.prefix

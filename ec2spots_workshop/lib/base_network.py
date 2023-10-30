@@ -36,13 +36,6 @@ dirname = os.path.dirname(__file__)
 def upper_string(string: str) -> str:
     return string.upper()
 
-@dataclass
-class EnvProps:
-    cidr_block: str
-    prefix: str
-    env: core.Environment
-    propertis: Dict
-
 class BaseNetworkEnv(Construct):
     
     @property
@@ -187,7 +180,7 @@ class BaseNetworkEnv(Construct):
         ec2.InterfaceVpcEndpoint(
             self, f"{self._prefix.upper()}-VPC-SSM-Endpoint",
             vpc=self._vpc,
-            service=ec2.InterfaceVpcEndpointService(f"com.amazonaws.{self._props.env.region}.ssm", 443),
+            service=ec2.InterfaceVpcEndpointService(f"com.amazonaws.{self._props.region}.ssm", 443),
             # Choose which availability zones to place the VPC endpoint in, based on
             # available AZs
             subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
@@ -263,7 +256,7 @@ class BaseNetworkEnv(Construct):
             self,
             scope: Construct,
             construct_id: str,
-            props: EnvProps,
+            props ,
             **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         self._prefix = props.prefix

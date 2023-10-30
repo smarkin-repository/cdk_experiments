@@ -7,8 +7,7 @@ import aws_cdk as core
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../../../ec2spots_workshop"))
 
 from lib import ( 
-    EnvProps
-    , WebProps
+    WebAsgProps
     , WorkshopWebAsgStack
     , ttl_termination_stack_factory
     , TTLProps
@@ -31,18 +30,6 @@ tags = {
 
 app = core.App()
 
-# create and fill EnvPro
-env_props = EnvProps(
-    env=env, # It doen't need any more
-    prefix="workshop",
-    cidr_block="172.30.0.0/24",
-    propertis={
-        "create_internet_gateway":True,
-        "enable_dns_hostnames":True,
-        "enable_dns_support":True,
-    }
-)
-
 ami_image = utils.get_latest_linux_ami_from_aws(
     region=env.region
     , pattern={
@@ -52,8 +39,15 @@ ami_image = utils.get_latest_linux_ami_from_aws(
     }
 )
 
-web_props = WebProps(
-    prefix="workshop"
+prefix = "workshop"
+web_props = WebAsgProps(
+    prefix=prefix
+    , cidr_block="172.30.0.0/24"
+    , propertis={
+        "create_internet_gateway":True,
+        "enable_dns_hostnames":True,
+        "enable_dns_support":True,
+    }
     , instance_type="t3.small"
     , spot_types=[
         "t3.small"
@@ -68,8 +62,7 @@ web_props = WebProps(
 )
 
 test_stack = WorkshopWebAsgStack(
-    app, f"{web_props.prefix.upper()}-WebASGStack"
-    , env_props=env_props 
+    app, f"{prefix.upper()}-WebASGStack"
     , props=web_props
     , env = env
 )
@@ -78,16 +71,16 @@ stacks.append(test_stack)
 # create and fill TTLProps
 ttl_props = TTLProps(
     ttl = 120,
-    prefix_name = f"{env_props.prefix}-ttl",
-    account = env.account,
-    region = env.region,
+    prefix_name = f"{prefix}-ttl",
     stack_names = []
 )
 
 ttl_stack = ttl_termination_stack_factory(
     app, "WorkShopTTL", 
     ttl_props=ttl_props,
-    stacks=stacks
+    stacks=stacks,
+    env=env
+
 )
 ttl_stack.add_dependency(test_stack)
 stacks.append(ttl_stack)
