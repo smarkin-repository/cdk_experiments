@@ -59,6 +59,7 @@ web_props = WebAsgProps(
     , ami_image=ami_image
     , domain_name="taloni.link"
     , record_name="test"
+    , data_path="../data/"
 )
 
 test_stack = WorkshopWebAsgStack(
@@ -66,6 +67,7 @@ test_stack = WorkshopWebAsgStack(
     , props=web_props
     , env = env
 )
+test_stack.add_assets()
 stacks.append(test_stack)
 
 # create and fill TTLProps

@@ -1,0 +1,1135 @@
+{
+    "Resources": {
+        "workshopbasenetworkenvWORKSHOPVPCBF95AF03": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "172.30.0.0/24",
+                "EnableDnsHostnames": true,
+                "EnableDnsSupport": true,
+                "InstanceTenancy": "default",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "workshop-workshop-vpc"
+                    }
+                ]
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet1SubnetB4397A7A": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": "dummy1a",
+                "CidrBlock": "172.30.0.0/27",
+                "MapPublicIpOnLaunch": true,
+                "Tags": [
+                    {
+                        "Key": "aws-cdk:subnet-name",
+                        "Value": "workshop-public-subnet"
+                    },
+                    {
+                        "Key": "aws-cdk:subnet-type",
+                        "Value": "Public"
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": "work-shop-ec2-spot/workshop-base-network-env/WORKSHOP-VPC/workshop-public-subnetSubnet1"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet1RouteTable5C3F2C97": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "work-shop-ec2-spot/workshop-base-network-env/WORKSHOP-VPC/workshop-public-subnetSubnet1"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet1RouteTableAssociation435C7C30": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet1RouteTable5C3F2C97"
+                },
+                "SubnetId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet1SubnetB4397A7A"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet1DefaultRoute72C8A103": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCIGWE4856173"
+                },
+                "RouteTableId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet1RouteTable5C3F2C97"
+                }
+            },
+            "DependsOn": [
+                "workshopbasenetworkenvWORKSHOPVPCVPCGWA64D52C5"
+            ]
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet2Subnet11292FC3": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": "dummy1b",
+                "CidrBlock": "172.30.0.32/27",
+                "MapPublicIpOnLaunch": true,
+                "Tags": [
+                    {
+                        "Key": "aws-cdk:subnet-name",
+                        "Value": "workshop-public-subnet"
+                    },
+                    {
+                        "Key": "aws-cdk:subnet-type",
+                        "Value": "Public"
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": "work-shop-ec2-spot/workshop-base-network-env/WORKSHOP-VPC/workshop-public-subnetSubnet2"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet2RouteTableFC7BE808": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "work-shop-ec2-spot/workshop-base-network-env/WORKSHOP-VPC/workshop-public-subnetSubnet2"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet2RouteTableAssociation160FF6D9": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet2RouteTableFC7BE808"
+                },
+                "SubnetId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet2Subnet11292FC3"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet2DefaultRouteB503F12D": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCIGWE4856173"
+                },
+                "RouteTableId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet2RouteTableFC7BE808"
+                }
+            },
+            "DependsOn": [
+                "workshopbasenetworkenvWORKSHOPVPCVPCGWA64D52C5"
+            ]
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet3Subnet084F9567": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": "dummy1c",
+                "CidrBlock": "172.30.0.64/27",
+                "MapPublicIpOnLaunch": true,
+                "Tags": [
+                    {
+                        "Key": "aws-cdk:subnet-name",
+                        "Value": "workshop-public-subnet"
+                    },
+                    {
+                        "Key": "aws-cdk:subnet-type",
+                        "Value": "Public"
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": "work-shop-ec2-spot/workshop-base-network-env/WORKSHOP-VPC/workshop-public-subnetSubnet3"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet3RouteTable60E74C3A": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "work-shop-ec2-spot/workshop-base-network-env/WORKSHOP-VPC/workshop-public-subnetSubnet3"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet3RouteTableAssociationDEE9EB2B": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet3RouteTable60E74C3A"
+                },
+                "SubnetId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet3Subnet084F9567"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet3DefaultRoute4F749FD9": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCIGWE4856173"
+                },
+                "RouteTableId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet3RouteTable60E74C3A"
+                }
+            },
+            "DependsOn": [
+                "workshopbasenetworkenvWORKSHOPVPCVPCGWA64D52C5"
+            ]
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet1SubnetEF5E53A4": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": "dummy1a",
+                "CidrBlock": "172.30.0.96/27",
+                "MapPublicIpOnLaunch": false,
+                "Tags": [
+                    {
+                        "Key": "aws-cdk:subnet-name",
+                        "Value": "workshop-private-subnet"
+                    },
+                    {
+                        "Key": "aws-cdk:subnet-type",
+                        "Value": "Private"
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": "work-shop-ec2-spot/workshop-base-network-env/WORKSHOP-VPC/workshop-private-subnetSubnet1"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet1RouteTableEA431A11": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "work-shop-ec2-spot/workshop-base-network-env/WORKSHOP-VPC/workshop-private-subnetSubnet1"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet1RouteTableAssociation5AD25D86": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet1RouteTableEA431A11"
+                },
+                "SubnetId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet1SubnetEF5E53A4"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet2Subnet76F6E69B": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": "dummy1b",
+                "CidrBlock": "172.30.0.128/27",
+                "MapPublicIpOnLaunch": false,
+                "Tags": [
+                    {
+                        "Key": "aws-cdk:subnet-name",
+                        "Value": "workshop-private-subnet"
+                    },
+                    {
+                        "Key": "aws-cdk:subnet-type",
+                        "Value": "Private"
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": "work-shop-ec2-spot/workshop-base-network-env/WORKSHOP-VPC/workshop-private-subnetSubnet2"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet2RouteTable0ED6A9BB": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "work-shop-ec2-spot/workshop-base-network-env/WORKSHOP-VPC/workshop-private-subnetSubnet2"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet2RouteTableAssociationD57B8D50": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet2RouteTable0ED6A9BB"
+                },
+                "SubnetId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet2Subnet76F6E69B"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet3Subnet4276496A": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": "dummy1c",
+                "CidrBlock": "172.30.0.160/27",
+                "MapPublicIpOnLaunch": false,
+                "Tags": [
+                    {
+                        "Key": "aws-cdk:subnet-name",
+                        "Value": "workshop-private-subnet"
+                    },
+                    {
+                        "Key": "aws-cdk:subnet-type",
+                        "Value": "Private"
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": "work-shop-ec2-spot/workshop-base-network-env/WORKSHOP-VPC/workshop-private-subnetSubnet3"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet3RouteTableD2B2325F": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "work-shop-ec2-spot/workshop-base-network-env/WORKSHOP-VPC/workshop-private-subnetSubnet3"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet3RouteTableAssociationBC95D761": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet3RouteTableD2B2325F"
+                },
+                "SubnetId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshopprivatesubnetSubnet3Subnet4276496A"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCIGWE4856173": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "workshop-workshop-vpc"
+                    }
+                ]
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCVPCGWA64D52C5": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "InternetGatewayId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCIGWE4856173"
+                },
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPVPCSSMEndpoint47BD0765": {
+            "Type": "AWS::EC2::VPCEndpoint",
+            "Properties": {
+                "PrivateDnsEnabled": false,
+                "SecurityGroupIds": [
+                    {
+                        "Fn::GetAtt": [
+                            "workshopbasenetworkenvWORKSHOPVPCBF95AF03",
+                            "DefaultSecurityGroup"
+                        ]
+                    }
+                ],
+                "ServiceName": "com.amazonaws.us-east-1.ssm",
+                "SubnetIds": [
+                    {
+                        "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet1SubnetB4397A7A"
+                    },
+                    {
+                        "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet2Subnet11292FC3"
+                    },
+                    {
+                        "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet3Subnet084F9567"
+                    }
+                ],
+                "VpcEndpointType": "Interface",
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvCertificateA777C9DB": {
+            "Type": "AWS::CertificateManager::Certificate",
+            "Properties": {
+                "DomainName": "test.taloni.link",
+                "DomainValidationOptions": [
+                    {
+                        "DomainName": "test.taloni.link",
+                        "HostedZoneId": "Z0764436UNSJQPH92RK7"
+                    },
+                    {
+                        "DomainName": "*.taloni.link",
+                        "HostedZoneId": "Z0764436UNSJQPH92RK7"
+                    }
+                ],
+                "SubjectAlternativeNames": [
+                    "*.taloni.link"
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Taloni link certificate"
+                    }
+                ],
+                "ValidationMethod": "DNS"
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPALB9EDF3161": {
+            "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties": {
+                "LoadBalancerAttributes": [
+                    {
+                        "Key": "deletion_protection.enabled",
+                        "Value": "false"
+                    }
+                ],
+                "Name": "workshop-workshop-alb",
+                "Scheme": "internet-facing",
+                "SecurityGroups": [
+                    {
+                        "Fn::GetAtt": [
+                            "workshopbasenetworkenvWORKSHOPALBSecurityGroup818C8FA1",
+                            "GroupId"
+                        ]
+                    },
+                    {
+                        "Fn::GetAtt": [
+                            "workshopbasenetworkenvWORKSHOPSecurityGroupCDD99F3A",
+                            "GroupId"
+                        ]
+                    }
+                ],
+                "Subnets": [
+                    {
+                        "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet1SubnetB4397A7A"
+                    },
+                    {
+                        "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet2Subnet11292FC3"
+                    },
+                    {
+                        "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet3Subnet084F9567"
+                    }
+                ],
+                "Type": "application"
+            },
+            "DependsOn": [
+                "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet1DefaultRoute72C8A103",
+                "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet1RouteTableAssociation435C7C30",
+                "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet2DefaultRouteB503F12D",
+                "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet2RouteTableAssociation160FF6D9",
+                "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet3DefaultRoute4F749FD9",
+                "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet3RouteTableAssociationDEE9EB2B"
+            ]
+        },
+        "workshopbasenetworkenvWORKSHOPALBSecurityGroup818C8FA1": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Automatically created Security Group for ELB workshopec2spotworkshopbasenetworkenvWORKSHOPALBC29E6FB1",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "Description": "Allow from anyone on port 80",
+                        "FromPort": 80,
+                        "IpProtocol": "tcp",
+                        "ToPort": 80
+                    },
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "Description": "Allow from anyone on port 443",
+                        "FromPort": 443,
+                        "IpProtocol": "tcp",
+                        "ToPort": 443
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPALBSecurityGrouptoworkshopec2spotworkshopwebasgstackWORKSHOPSecurityGroupB2FEE511808048D20894": {
+            "Type": "AWS::EC2::SecurityGroupEgress",
+            "Properties": {
+                "Description": "Load balancer to target",
+                "DestinationSecurityGroupId": {
+                    "Fn::GetAtt": [
+                        "workshopwebasgstackWORKSHOPSecurityGroup9031F8D6",
+                        "GroupId"
+                    ]
+                },
+                "FromPort": 8080,
+                "GroupId": {
+                    "Fn::GetAtt": [
+                        "workshopbasenetworkenvWORKSHOPALBSecurityGroup818C8FA1",
+                        "GroupId"
+                    ]
+                },
+                "IpProtocol": "tcp",
+                "ToPort": 8080
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPALBRedirect80To443815C85FE": {
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+            "Properties": {
+                "DefaultActions": [
+                    {
+                        "RedirectConfig": {
+                            "Port": "443",
+                            "Protocol": "HTTPS",
+                            "StatusCode": "HTTP_301"
+                        },
+                        "Type": "redirect"
+                    }
+                ],
+                "LoadBalancerArn": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPALB9EDF3161"
+                },
+                "Port": 80,
+                "Protocol": "HTTP"
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPSecurityGroupCDD99F3A": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "work-shop-ec2-spot/workshop-base-network-env/WORKSHOP-SecurityGroup",
+                "GroupName": "workshop-alb-sg",
+                "SecurityGroupEgress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "Description": "Allow all outbound traffic by default",
+                        "IpProtocol": "-1"
+                    }
+                ],
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": {
+                            "Fn::GetAtt": [
+                                "workshopbasenetworkenvWORKSHOPVPCBF95AF03",
+                                "CidrBlock"
+                            ]
+                        },
+                        "Description": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "from ",
+                                    {
+                                        "Fn::GetAtt": [
+                                            "workshopbasenetworkenvWORKSHOPVPCBF95AF03",
+                                            "CidrBlock"
+                                        ]
+                                    },
+                                    ":443"
+                                ]
+                            ]
+                        },
+                        "FromPort": 443,
+                        "IpProtocol": "tcp",
+                        "ToPort": 443
+                    },
+                    {
+                        "CidrIp": "88.1.55.78/32",
+                        "Description": "from 88.1.55.78/32:443",
+                        "FromPort": 443,
+                        "IpProtocol": "tcp",
+                        "ToPort": 443
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPALBTargetGroup61F9FEC3": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "HealthCheckIntervalSeconds": 60,
+                "HealthCheckPath": "/",
+                "HealthCheckPort": "8080",
+                "HealthCheckTimeoutSeconds": 5,
+                "Name": "WORKSHOP-workshop-tg",
+                "Port": 8080,
+                "Protocol": "HTTP",
+                "TargetGroupAttributes": [
+                    {
+                        "Key": "stickiness.enabled",
+                        "Value": "false"
+                    }
+                ],
+                "TargetType": "instance",
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopbasenetworkenvWORKSHOPALBListenerD014CC45": {
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+            "Properties": {
+                "Certificates": [
+                    {
+                        "CertificateArn": {
+                            "Ref": "workshopbasenetworkenvCertificateA777C9DB"
+                        }
+                    }
+                ],
+                "DefaultActions": [
+                    {
+                        "TargetGroupArn": {
+                            "Ref": "workshopbasenetworkenvWORKSHOPALBTargetGroup61F9FEC3"
+                        },
+                        "Type": "forward"
+                    }
+                ],
+                "LoadBalancerArn": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPALB9EDF3161"
+                },
+                "Port": 443,
+                "Protocol": "HTTPS"
+            }
+        },
+        "workshopwebasgstackWORKSHOPInstanceSSM16F57DCB": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "ec2.amazonaws.com"
+                            }
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "ManagedPolicyArns": [
+                    {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "arn:",
+                                {
+                                    "Ref": "AWS::Partition"
+                                },
+                                ":iam::aws:policy/AmazonSSMManagedInstanceCore"
+                            ]
+                        ]
+                    }
+                ],
+                "RoleName": "workshop-instance-role-ssm-policy"
+            }
+        },
+        "workshopwebasgstackWORKSHOPEC2PolicyFFFA9462": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "acm:DescribeCertificate",
+                            "Effect": "Allow",
+                            "Resource": "*"
+                        },
+                        {
+                            "Action": "acm:GetCertificate",
+                            "Effect": "Allow",
+                            "Resource": "*"
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "PolicyName": "workshopwebasgstackWORKSHOPEC2PolicyFFFA9462",
+                "Roles": [
+                    {
+                        "Ref": "workshopwebasgstackWORKSHOPInstanceSSM16F57DCB"
+                    }
+                ]
+            }
+        },
+        "workshopwebasgstackWORKSHOPInstanceProfile23AB007E": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "InstanceProfileName": "workshop-instance-profile-ssm-policy",
+                "Roles": [
+                    {
+                        "Ref": "workshopwebasgstackWORKSHOPInstanceSSM16F57DCB"
+                    }
+                ]
+            }
+        },
+        "workshopwebasgstackWORKSHOPSecurityGroup9031F8D6": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "work-shop-ec2-spot/workshop-web-asg-stack/WORKSHOP-SecurityGroup",
+                "GroupName": "workshop-instance-ssm-sg",
+                "SecurityGroupEgress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "Description": "Allow all outbound traffic by default",
+                        "IpProtocol": "-1"
+                    }
+                ],
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": "88.1.55.78/32",
+                        "Description": "from 88.1.55.78/32:8080",
+                        "FromPort": 8080,
+                        "IpProtocol": "tcp",
+                        "ToPort": 8080
+                    },
+                    {
+                        "CidrIp": {
+                            "Fn::GetAtt": [
+                                "workshopbasenetworkenvWORKSHOPVPCBF95AF03",
+                                "CidrBlock"
+                            ]
+                        },
+                        "Description": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "from ",
+                                    {
+                                        "Fn::GetAtt": [
+                                            "workshopbasenetworkenvWORKSHOPVPCBF95AF03",
+                                            "CidrBlock"
+                                        ]
+                                    },
+                                    ":8080"
+                                ]
+                            ]
+                        },
+                        "FromPort": 8080,
+                        "IpProtocol": "tcp",
+                        "ToPort": 8080
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "workshopbasenetworkenvWORKSHOPVPCBF95AF03"
+                }
+            }
+        },
+        "workshopwebasgstackWORKSHOPSecurityGroupfromworkshopec2spotworkshopbasenetworkenvWORKSHOPALBSecurityGroup84FF204E8080487AA2D7": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "Description": "Load balancer to target",
+                "FromPort": 8080,
+                "GroupId": {
+                    "Fn::GetAtt": [
+                        "workshopwebasgstackWORKSHOPSecurityGroup9031F8D6",
+                        "GroupId"
+                    ]
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Fn::GetAtt": [
+                        "workshopbasenetworkenvWORKSHOPALBSecurityGroup818C8FA1",
+                        "GroupId"
+                    ]
+                },
+                "ToPort": 8080
+            }
+        },
+        "workshopwebasgstackWORKSHOPSecurityGroupfromworkshopec2spotworkshopbasenetworkenvWORKSHOPSecurityGroup3E28A34F8080214CD282": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "Description": "Load balancer to target",
+                "FromPort": 8080,
+                "GroupId": {
+                    "Fn::GetAtt": [
+                        "workshopwebasgstackWORKSHOPSecurityGroup9031F8D6",
+                        "GroupId"
+                    ]
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Fn::GetAtt": [
+                        "workshopbasenetworkenvWORKSHOPSecurityGroupCDD99F3A",
+                        "GroupId"
+                    ]
+                },
+                "ToPort": 8080
+            }
+        },
+        "workshopwebasgstackworkshopspottemplateProfile407AE8B2": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Roles": [
+                    {
+                        "Ref": "workshopwebasgstackWORKSHOPInstanceSSM16F57DCB"
+                    }
+                ]
+            }
+        },
+        "workshopwebasgstackworkshopspottemplate1FEB6AB5": {
+            "Type": "AWS::EC2::LaunchTemplate",
+            "Properties": {
+                "LaunchTemplateData": {
+                    "IamInstanceProfile": {
+                        "Arn": {
+                            "Fn::GetAtt": [
+                                "workshopwebasgstackworkshopspottemplateProfile407AE8B2",
+                                "Arn"
+                            ]
+                        }
+                    },
+                    "ImageId": {
+                        "Ref": "SsmParameterValueawsserviceamiamazonlinuxlatestamzn2amikernel510hvmx8664gp2C96584B6F00A464EAD1953AFF4B05118Parameter"
+                    },
+                    "InstanceType": "t3.small",
+                    "SecurityGroupIds": [
+                        {
+                            "Fn::GetAtt": [
+                                "workshopwebasgstackWORKSHOPSecurityGroup9031F8D6",
+                                "GroupId"
+                            ]
+                        }
+                    ],
+                    "TagSpecifications": [
+                        {
+                            "ResourceType": "instance",
+                            "Tags": [
+                                {
+                                    "Key": "Name",
+                                    "Value": "work-shop-ec2-spot/workshop-web-asg-stack/workshop-spot-template"
+                                }
+                            ]
+                        },
+                        {
+                            "ResourceType": "volume",
+                            "Tags": [
+                                {
+                                    "Key": "Name",
+                                    "Value": "work-shop-ec2-spot/workshop-web-asg-stack/workshop-spot-template"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "LaunchTemplateName": "workshop-launch-template-spots",
+                "TagSpecifications": [
+                    {
+                        "ResourceType": "launch-template",
+                        "Tags": [
+                            {
+                                "Key": "Name",
+                                "Value": "work-shop-ec2-spot/workshop-web-asg-stack/workshop-spot-template"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "DependsOn": [
+                "workshopwebasgstackWORKSHOPInstanceSSM16F57DCB"
+            ]
+        },
+        "workshopwebasgstackWORKSHOPASGWebAppASGF52C784A": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "AutoScalingGroupName": "workshop-asg-web-app",
+                "DesiredCapacity": "1",
+                "MaxSize": "2",
+                "MinSize": "1",
+                "MixedInstancesPolicy": {
+                    "InstancesDistribution": {
+                        "OnDemandBaseCapacity": 0,
+                        "OnDemandPercentageAboveBaseCapacity": 0,
+                        "SpotAllocationStrategy": "price-capacity-optimized"
+                    },
+                    "LaunchTemplate": {
+                        "LaunchTemplateSpecification": {
+                            "LaunchTemplateId": {
+                                "Ref": "workshopwebasgstackworkshopspottemplate1FEB6AB5"
+                            },
+                            "Version": {
+                                "Fn::GetAtt": [
+                                    "workshopwebasgstackworkshopspottemplate1FEB6AB5",
+                                    "LatestVersionNumber"
+                                ]
+                            }
+                        },
+                        "Overrides": [
+                            {
+                                "InstanceType": "t3.small"
+                            },
+                            {
+                                "InstanceType": "t4g.small"
+                            }
+                        ]
+                    }
+                },
+                "TargetGroupARNs": [
+                    {
+                        "Ref": "workshopbasenetworkenvWORKSHOPALBTargetGroup61F9FEC3"
+                    }
+                ],
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet1SubnetB4397A7A"
+                    },
+                    {
+                        "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet2Subnet11292FC3"
+                    },
+                    {
+                        "Ref": "workshopbasenetworkenvWORKSHOPVPCworkshoppublicsubnetSubnet3Subnet084F9567"
+                    }
+                ]
+            },
+            "UpdatePolicy": {
+                "AutoScalingScheduledAction": {
+                    "IgnoreUnmodifiedGroupSizeProperties": true
+                }
+            }
+        },
+        "workshoproute53workshoparecordBEE43FFA": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "AliasTarget": {
+                    "DNSName": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "dualstack.",
+                                {
+                                    "Fn::GetAtt": [
+                                        "workshopbasenetworkenvWORKSHOPALB9EDF3161",
+                                        "DNSName"
+                                    ]
+                                }
+                            ]
+                        ]
+                    },
+                    "HostedZoneId": {
+                        "Fn::GetAtt": [
+                            "workshopbasenetworkenvWORKSHOPALB9EDF3161",
+                            "CanonicalHostedZoneID"
+                        ]
+                    }
+                },
+                "HostedZoneId": "DUMMY",
+                "Name": "test.taloni.link.",
+                "Type": "A"
+            },
+            "DependsOn": [
+                "workshoproute53workshoparecordDeleteExistingRecordSetCustomResource90E1991F"
+            ]
+        },
+        "workshoproute53workshoparecordDeleteExistingRecordSetCustomResource90E1991F": {
+            "Type": "Custom::DeleteExistingRecordSet",
+            "Properties": {
+                "ServiceToken": {
+                    "Fn::GetAtt": [
+                        "CustomDeleteExistingRecordSetCustomResourceProviderHandlerAD00231E",
+                        "Arn"
+                    ]
+                },
+                "HostedZoneId": "DUMMY",
+                "RecordName": "test.taloni.link.",
+                "RecordType": "A"
+            },
+            "UpdateReplacePolicy": "Delete",
+            "DeletionPolicy": "Delete"
+        },
+        "CustomDeleteExistingRecordSetCustomResourceProviderRole03A7ED08": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "lambda.amazonaws.com"
+                            }
+                        }
+                    ]
+                },
+                "ManagedPolicyArns": [
+                    {
+                        "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+                    }
+                ],
+                "Policies": [
+                    {
+                        "PolicyName": "Inline",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": "route53:GetChange",
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": "route53:ListResourceRecordSets",
+                                    "Resource": {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:",
+                                                {
+                                                    "Ref": "AWS::Partition"
+                                                },
+                                                ":route53:::hostedzone/DUMMY"
+                                            ]
+                                        ]
+                                    }
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": "route53:ChangeResourceRecordSets",
+                                    "Resource": {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:",
+                                                {
+                                                    "Ref": "AWS::Partition"
+                                                },
+                                                ":route53:::hostedzone/DUMMY"
+                                            ]
+                                        ]
+                                    },
+                                    "Condition": {
+                                        "ForAllValues:StringEquals": {
+                                            "route53:ChangeResourceRecordSetsRecordTypes": [
+                                                "A"
+                                            ],
+                                            "route53:ChangeResourceRecordSetsActions": [
+                                                "DELETE"
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "CustomDeleteExistingRecordSetCustomResourceProviderHandlerAD00231E": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Code": {
+                    "S3Bucket": "cdk-hnb659fds-assets-500480925365-us-east-1",
+                    "S3Key": "69687d169348399affdbd6b99dbeb83b9a8f8a6509a8710fd02cd2cccd39b745.zip"
+                },
+                "Timeout": 900,
+                "MemorySize": 128,
+                "Handler": "__entrypoint__.handler",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "CustomDeleteExistingRecordSetCustomResourceProviderRole03A7ED08",
+                        "Arn"
+                    ]
+                },
+                "Runtime": "nodejs18.x"
+            },
+            "DependsOn": [
+                "CustomDeleteExistingRecordSetCustomResourceProviderRole03A7ED08"
+            ]
+        }
+    },
+    "Parameters": {
+        "SsmParameterValueawsserviceamiamazonlinuxlatestamzn2amikernel510hvmx8664gp2C96584B6F00A464EAD1953AFF4B05118Parameter": {
+            "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+            "Default": "/aws/service/ami-amazon-linux-latest/amzn2-ami-kernel-5.10-hvm-x86_64-gp2"
+        },
+        "BootstrapVersion": {
+            "Type": "AWS::SSM::Parameter::Value<String>",
+            "Default": "/cdk-bootstrap/hnb659fds/version",
+            "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+        }
+    },
+    "Rules": {
+        "CheckBootstrapVersion": {
+            "Assertions": [
+                {
+                    "Assert": {
+                        "Fn::Not": [
+                            {
+                                "Fn::Contains": [
+                                    [
+                                        "1",
+                                        "2",
+                                        "3",
+                                        "4",
+                                        "5"
+                                    ],
+                                    {
+                                        "Ref": "BootstrapVersion"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+                }
+            ]
+        }
+    }
+}

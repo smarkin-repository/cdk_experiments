@@ -17,6 +17,7 @@ class WebAsgProps:
     domain_name: str=None
     record_name: str=None
     env: core.Environment=None
+    data_path: str=None
 
 @dataclass
 class EC2Props:

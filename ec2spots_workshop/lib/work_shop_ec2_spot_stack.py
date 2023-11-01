@@ -38,17 +38,12 @@ class WorkshopEC2SpotStack(Stack):
 class WorkshopWebAsgStack(Stack):
     # TODO list
     # Works well for HTTP, but still need to improve for HTTPS
-    # - check user_data script
-    # - support https protocol between client and ALB
     # - write tests
     # - next step ssm-stress.json
     # - aws ssm send-command --cli-input-json file://ssm-stress.json
 
-# Let's check it
-# Therefore, you don't need to create your own certificate or install 
-# the ACM certificate on the EC2 instance in this configuration. 
-# The ACM certificate on the ALB will secure the connection between clients 
-# and the ALB.
+    def add_assets(self):
+        self._web_asg.asset_user_data()
     
     def __init__(self, scope: Construct, construct_id: str, props: WebAsgProps, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -57,15 +52,14 @@ class WorkshopWebAsgStack(Stack):
         base_env = BaseNetworkEnv(self, f"{props.prefix}-base-network-env", props)
         base_env.create_ssm_endpoint()
         props.vpc = base_env.vpc
-        web_asg = WebAsg(self, f"{props.prefix}-web-asg-stack", props )
-        web_asg.create_asg()
-        base_env.create_alb_with_connect_http_to(
-            asg=web_asg.asg,
-            port=80,
+        self._web_asg = WebAsg(self, f"{props.prefix}-web-asg-stack", props )
+        self._web_asg.create_asg()
+        base_env.create_alb_with_connect_https_to(
+            asg=self._web_asg.asg,
+            port=443,
             port_target=8080,
             internet_facing=True
         )
-        web_asg.asset_user_data(data_path="../data/scripts")
         route53 = R53(self, f"{props.prefix}-route53", props.prefix)
         route53.create_arecord(
             domain_name=props.domain_name,

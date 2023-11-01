@@ -69,7 +69,7 @@ class WebAsg(Construct):
         )
         # read Policy Document from a json file
         policy_document = iam.PolicyDocument.from_json(
-            json.load(open(os.path.join(dirname, "../data/policy", "ec2_policy.json")))
+            json.load(open(os.path.join(dirname, f"{self.props.data_path}/policy", "ec2_policy.json")))
         )
         policy = iam.Policy(
             self, f"{self._prefix.upper()}-EC2-Policy",
@@ -216,10 +216,10 @@ class WebAsg(Construct):
             mixed_instances_policy=mixed_instances_policy,
         )
         
-    def asset_user_data(self, data_path: str):
+    def asset_user_data(self, data_path: str=None):
         script_paths=[]
         script_paths.append(
-            os.path.join(dirname, f"{data_path}/user_data.sh"))
+            os.path.join(dirname, f"{self.props.data_path}/scripts/user_data.sh"))
         return self._asset_user_data(self._asg, script_paths)
     
     def create_asg(self, props: WebAsgProps=None):
