@@ -9,8 +9,9 @@ from constructs import Construct
 from .base_network  import BaseNetworkEnv
 from .ec2_spot import EC2Spot, EC2Props
 from .web_asg import WebAsg
+from .ecs import ECS
 from .route53 import R53
-from .props import WebAsgProps
+from .props import WebAsgProps, ECSProps
 from .utils import get_my_external_ip
 
 class WorkshopEC2SpotStack(Stack):
@@ -36,11 +37,6 @@ class WorkshopEC2SpotStack(Stack):
         EC2Spot(self, f"${env_props.prefix}-ec2-spot-stack", ec2_props )
 
 class WorkshopWebAsgStack(Stack):
-    # TODO list
-    # Works well for HTTP, but still need to improve for HTTPS
-    # - next step ssm-stress.json
-    # - aws ssm send-command --cli-input-json file://ssm-stress.json
-
     def add_assets(self):
         self._web_asg.asset_user_data()
     
@@ -66,3 +62,25 @@ class WorkshopWebAsgStack(Stack):
             target=base_env.alb
         )
         # The code that defines your stack goes here
+
+
+class WorkshopECSStack(Stack):
+    """
+    stack creates the following resources for the workshop.
+    - 1 VPC with 6 subnets; 3 public and 3 private subnets
+    - Application Load Balancer (ALB) with its own security group
+    - Target Group and an ALB listener
+    - Cloud9 Environment and its IAM Role
+    - EC2 Launch template with necessary ECS config for bootstrapping the instances into the ECS cluster
+    - ECR Repository
+    """
+    
+    def __init__(
+        self, scope: Construct, construct_id: str, props: ECSProps, **kwargs) -> None:
+        super().__init__(scope, construct_id, **kwargs)
+        props.account = self.account
+        props.region = self.region
+        # 1 VPC with 2 subnets; 1 public and 1 private subnets
+        base_env = BaseNetworkEnv(self, f"{props.prefix}-base-network-env", props)
+        base_env.create_ssm_endpoint()
+        ecs = ECS(self, f"{props.prefix}-ecs-stack", props )

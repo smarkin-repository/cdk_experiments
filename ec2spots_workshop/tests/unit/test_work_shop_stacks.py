@@ -8,12 +8,12 @@ import requests
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../ec2spots_workshop"))
 
 
-from lib.work_shop_ec2_spot_stack import WorkshopWebAsgStack
-from lib.props import WebAsgProps
+from lib.work_shop_ec2_spot_stack import WorkshopWebAsgStack, WorkshopECSStack
+from lib.props import WebAsgProps, ECSProps
 from lib.utils import get_latest_linux_ami_from_aws, get_current_env
 
 # This is a sample test case. You can modify it to test the behavior of your
-pytestmark = [pytest.mark.unit, pytest.mark.integration]
+# pytestmark = [pytest.mark.unit, pytest.mark.integration]
 
 # example tests. To run these tests, uncomment this file along with the example
 # resource in work_shop_ec2_spot/work_shop_ec2_spot_stack.py
@@ -21,7 +21,7 @@ pytestmark = [pytest.mark.unit, pytest.mark.integration]
 # syrupy, the snapshot testing library we're using:
 # https://docs.pytest.org/en/stable/explanation/fixtures.html
 @pytest.mark.unit
-def test_sqs_queue_created(snapshot):
+def test_webasg_created(snapshot):
     app = core.App()
     os.environ["CDK_DEFAULT_ACCOUNT"]="500480925365"
     os.environ["CDK_DEFAULT_REGION"]="us-east-1"
@@ -68,6 +68,28 @@ def test_sqs_queue_created(snapshot):
     template = assertions.Template.from_stack(stack)
     assert template.to_json() == snapshot
 
+
+@pytest.mark.unit
+def test_ecs_created(ecs_props, env):
+    app = core.App()
+
+    stack = WorkshopECSStack(
+        app
+        , "workshop-ecs-spot"
+        , props = ecs_props
+        , env = env
+    )
+    template = assertions.Template.from_stack(stack)
+    # https://github.com/cdklabs/aws-cdk-testing-examples/blob/main/python/test/test_processor_stack.py
+    template.resource_count_is("AWS::EC2::VPC", 1)
+    template.resource_count_is("AWS::AutoScaling::AutoScalingGroup", 1)
+    template.resource_count_is("AWS::ElasticLoadBalancingV2::Listener", 1)
+    template.resource_count_is("AWS::ElasticLoadBalancingV2::TargetGroup", 1)
+    template.resource_count_is("AWS::ECR::Repository", 1)
+
+    # template.has_resource_properties("AWS::VPC::Queue", {
+    #     "VisibilityTimeout": 300
+    # })
 
 @pytest.mark.integration
 def test_web_page(snapshot):

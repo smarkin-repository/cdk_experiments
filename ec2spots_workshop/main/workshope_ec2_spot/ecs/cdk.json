@@ -1,5 +1,5 @@
 {
-  "app": "python3 ./main/workshope_ec2_spot/ecs/app.py",
+  "app": "python3 app.py",
   "watch": {
     "include": [
       "**"
