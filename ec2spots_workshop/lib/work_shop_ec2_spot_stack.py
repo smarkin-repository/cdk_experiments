@@ -38,7 +38,6 @@ class WorkshopEC2SpotStack(Stack):
 class WorkshopWebAsgStack(Stack):
     # TODO list
     # Works well for HTTP, but still need to improve for HTTPS
-    # - write tests
     # - next step ssm-stress.json
     # - aws ssm send-command --cli-input-json file://ssm-stress.json
 

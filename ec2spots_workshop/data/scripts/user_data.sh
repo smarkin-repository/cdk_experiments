@@ -1,7 +1,7 @@
 #!/bin/bash
 
 sudo yum update -y
-sudo yum install -y httpd python3
+sudo yum install -y httpd python3 stress-ng
 
 sudo sed -i 's/^Listen [0-9]\+/Listen 8080/' /etc/httpd/conf/httpd.conf
 sudo systemctl start httpd

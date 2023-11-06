@@ -2,6 +2,7 @@ import pytest
 import json
 import os
 
+
 @pytest.fixture
 def snapshot():
     # read json file from 'data' director

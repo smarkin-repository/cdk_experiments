@@ -1,7 +1,9 @@
 import os
+import pytest
 import sys
 import aws_cdk as core
 import aws_cdk.assertions as assertions
+import requests
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../ec2spots_workshop"))
 
@@ -10,11 +12,15 @@ from lib.work_shop_ec2_spot_stack import WorkshopWebAsgStack
 from lib.props import WebAsgProps
 from lib.utils import get_latest_linux_ami_from_aws, get_current_env
 
+# This is a sample test case. You can modify it to test the behavior of your
+pytestmark = [pytest.mark.unit, pytest.mark.integration]
+
 # example tests. To run these tests, uncomment this file along with the example
 # resource in work_shop_ec2_spot/work_shop_ec2_spot_stack.py
 # The snapshot parameter is injected by Pytest -- it's a fixture provided by
 # syrupy, the snapshot testing library we're using:
 # https://docs.pytest.org/en/stable/explanation/fixtures.html
+@pytest.mark.unit
 def test_sqs_queue_created(snapshot):
     app = core.App()
     os.environ["CDK_DEFAULT_ACCOUNT"]="500480925365"
@@ -61,3 +67,13 @@ def test_sqs_queue_created(snapshot):
     )
     template = assertions.Template.from_stack(stack)
     assert template.to_json() == snapshot
+
+
+@pytest.mark.integration
+def test_web_page(snapshot):
+    """
+        Make a request to the web page and check the response code.
+    """
+    code_result = requests.get("https://test.taloni.link").status_code
+
+    assert code_result == 200
