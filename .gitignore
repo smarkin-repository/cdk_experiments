@@ -166,7 +166,7 @@ secrets.yml
 TODO.md
 
 cdk.context.json
-
+.vscode
 # CDK asset staging directory
 .cdk.staging
 cdk.out
