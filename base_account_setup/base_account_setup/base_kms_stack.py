@@ -22,11 +22,11 @@ class BaseKmsStack(Stack):
     # def alias(self):
     #     return self._alias
 
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, prefix_name: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         self._kms = kms.Key(
-            self, "BaseKmsKey",
+            self, f"{prefix_name.capitalize()}KmsKey",
             description="base kms key",
             alias="base_kms_key"
         )
@@ -37,5 +37,5 @@ class BaseKmsStack(Stack):
         #     target_key=self._kms
         # )
 
-        CfnOutput(self, "BaseKmsName", value=self._kms.key_arn)
+        CfnOutput(self, f"{prefix_name.capitalize()}KmsName", value=self._kms.key_arn)
         # CfnOutput(self, "BaseKmsArn", value=self._alias.key_arn)

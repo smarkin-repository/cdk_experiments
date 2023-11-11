@@ -3,7 +3,7 @@ import os
 
 import aws_cdk as cdk
 import logging
-from base_env.base_kms_stack import BaseKmsStack
+import base_account_setup as app_stacks
 
 # Default settings for loggin
 logging.basicConfig(level=logging.INFO)
@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 
 
 stacks = []
+prefix_name = "base"
 tags = {
     "Owner" : "smarkin",
     "Type" : "CDK",
@@ -29,23 +30,10 @@ except KeyError:
     log.error("Try to run 'aws sso login' to refresh session")
     raise
 
-
-# TODO Attach notebook
-# user CodeCommite and attach to SageMaker.
-# cdk will be create repo with notebooks
-# https://docs.aws.amazon.com/sagemaker/latest/dg/nbi-git-resource.html
-# TODO Model Training  Jobs
-# https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_stepfunctions_tasks/SageMakerCreateTrainingJob.html
-# TODO Model Creation
-
-# For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
-# TODO add timeline/lifecycle for stacks
-# TODO add Algorithms 
-
 log.info(f"""
-         Hello! Start to work to create Base Environment 
-         - VPC
-         - KMS
+         Hello! Start to work to create Base  Account Environment 
+         - S3 Storage
+         - ECR Repository
 
          You use follow enviornment values:
          - CDK_DEPLOY_ACCOUNT: {env.account}
@@ -59,8 +47,11 @@ def add_tags(stacks: list, tags: dict):
             # cdk.Tag(stack, key, value)
             cdk.Tags.of(stack).add(key, value)
 
-base_kms_stack = BaseKmsStack(app, "BaseKmsStack", env=env)
-stacks.append(base_kms_stack)
+ecr_stack = app_stacks.ECR(app, "EcrStack", prefix_name=prefix_name, env=env)
+stacks.append(ecr_stack)
+
+s3_stack = app_stacks.Storage(app, "StorageStack", prefix_name=prefix_name, env=env)
+stacks.append(s3_stack)
 
 add_tags(stacks, tags)
    
