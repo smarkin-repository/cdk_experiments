@@ -64,7 +64,7 @@ web_props = ECSProps(
 )
 
 test_stack = WorkshopECSStack(
-    app, f"{prefix.upper()}-ECS-Stack"
+    app, f"{prefix.capitalize()}-ECS-Stack"
     , props=web_props
     , env = env
 )

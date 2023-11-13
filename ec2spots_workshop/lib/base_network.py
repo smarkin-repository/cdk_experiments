@@ -50,7 +50,8 @@ class BaseNetworkEnv(Construct):
     def sg_alb(self):
         return self._sg_alb
 
-    
+    # TODO support multi subnets, 
+    # I wish to see opportunity to devide VPC on several publica and private subnets
     def _create_vpc(
             self, id: str, 
             prefix: str, 

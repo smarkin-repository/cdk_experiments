@@ -14,6 +14,7 @@ from .route53 import R53
 from .props import WebAsgProps, ECSProps
 from .utils import get_my_external_ip
 
+
 class WorkshopEC2SpotStack(Stack):
     # TODO list mixed instance policy
     # - use spot but without mix
@@ -83,4 +84,25 @@ class WorkshopECSStack(Stack):
         # 1 VPC with 2 subnets; 1 public and 1 private subnets
         base_env = BaseNetworkEnv(self, f"{props.prefix}-base-network-env", props)
         base_env.create_ssm_endpoint()
+        # EC2 Launch template with necessary ECS config for bootstrapping the instances into the ECS cluster
         ecs = ECS(self, f"{props.prefix}-ecs-stack", props )
+        ecs.create_cluster(
+            base_env.vpc,
+            allow_ip_addresses=[ base_env.vpc.vpc_cidr_block , get_my_external_ip()]
+        )
+
+        # Application Load Balancer (ALB) with its own security group
+        # Target Group and an ALB listener
+        base_env.create_alb_with_connect_https_to(
+            asg=ecs.asg,
+            port=443,
+            port_target=80,
+            internet_facing=True
+        )
+        route53 = R53(self, f"{props.prefix}-route53", props.prefix)
+        route53.create_arecord(
+            domain_name=props.domain_name,
+            record_name=props.record_name,
+            target=base_env.alb
+        )
+        # ? Cloud9 Environment and its IAM Role 
