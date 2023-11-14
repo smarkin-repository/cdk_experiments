@@ -86,15 +86,16 @@ class WorkshopECSStack(Stack):
         base_env.create_ssm_endpoint()
         # EC2 Launch template with necessary ECS config for bootstrapping the instances into the ECS cluster
         ecs = ECS(self, f"{props.prefix}-ecs-stack", props )
+        _asg = ecs.create_asg(vpc=base_env.vpc)
         ecs.create_cluster(
-            base_env.vpc,
-            allow_ip_addresses=[ base_env.vpc.vpc_cidr_block , get_my_external_ip()]
+            vpc=base_env.vpc,
+            autoscaling_group=_asg
         )
-
+        service = ecs.create_service()
         # Application Load Balancer (ALB) with its own security group
         # Target Group and an ALB listener
         base_env.create_alb_with_connect_https_to(
-            asg=ecs.asg,
+            target=service,
             port=443,
             port_target=80,
             internet_facing=True
