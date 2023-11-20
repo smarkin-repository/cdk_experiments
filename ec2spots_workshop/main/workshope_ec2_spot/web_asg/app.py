@@ -39,6 +39,15 @@ ami_image = utils.get_latest_linux_ami_from_aws(
     }
 )
 
+ami_image_test = utils.get_latest_linux_ami_from_aws(
+    region=env.region
+    , pattern={
+            "owner" : "500480925365",
+            "architecture" : "x86_64",
+            "name" : "amazon-linux-2-test"
+    }
+)
+
 prefix = "workshop"
 web_props = WebAsgProps(
     prefix=prefix

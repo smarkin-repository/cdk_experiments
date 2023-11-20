@@ -38,9 +38,6 @@ class WebAsg(Construct):
     def instance_role(self):
         return self._instance_role
     
-    @property
-    def securety_group(self):
-        return self._sg_instance
     
     @property
     def instance_profile(self):
@@ -81,22 +78,6 @@ class WebAsg(Construct):
         
         # instance_role.
         return instance_role
-
-    def _create_securety_group(self, vpc, port, allow_ip_addresses):
-        sg_instance = ec2.SecurityGroup(
-            self, f"{self._prefix.upper()}-SecurityGroup",
-            vpc=vpc,
-            allow_all_outbound=True,
-            security_group_name=f"{self._prefix}-instance-ssm-sg"
-        )
-
-
-        for ip_address in allow_ip_addresses:
-            sg_instance.add_ingress_rule(
-                peer=ec2.Peer.ipv4(ip_address),
-                connection=ec2.Port.tcp(port)
-            )
-        return sg_instance
     
     def _create_instance_profile(self, iam_roles: list):
         instance_profile = iam.CfnInstanceProfile(
@@ -109,17 +90,17 @@ class WebAsg(Construct):
     def _create_asg_template(
             self, 
             iam_role, 
-            # instance_profile, 
             securety_group, 
             instance_type, 
             ami_image):
         return ec2.LaunchTemplate(
             self, f"{self._prefix}-spot-template",
+            associate_public_ip_address=False,
             launch_template_name=f"{self._prefix}-launch-template-spots",
             machine_image=ami_image,
             security_group=securety_group,
             instance_type=ec2.InstanceType(instance_type),
-            # instance_profile=instance_profile,
+            require_imdsv2=True,
             role=iam_role,
         )
         
@@ -145,27 +126,6 @@ class WebAsg(Construct):
         with open(os.path.join(dirname, full_name), 'r') as f:
             user_data = f.read()
         return ec2.UserData.custom(user_data)
-
-    # def _asset_user_data(self, asg):
-    #     # Script in S3 as Asset
-    #     asset = Asset.Asset(
-    #         self, f"{self._prefix}-asset",
-    #         path=os.path.join(dirname, "../scripts/user_data.sh")
-    #     )
-
-    #     local_path = asg.user_data.add_s3_download_command(
-    #         bucket=asset.bucket,
-    #         bucket_key=asset.s3_object_key
-    #     )
-
-    #     # User data executes scripts from s3
-    #     asg.user_data.add_execute_file_command(
-    #         file_path=local_path
-    #     )
-
-    #     asset.grant_read(self._instance_role)
-        # return asset
-
     
     def _asset_user_data(self, asg, script_paths: List[str]):
         """
@@ -201,15 +161,14 @@ class WebAsg(Construct):
             self, props: WebAsgProps,
             launch_template,
             mixed_instances_policy,
+            subnets,
             securety_group
         ):
         return asg.AutoScalingGroup(
             self, f"{self._prefix.upper()}-ASG-Web-App",
             auto_scaling_group_name=f"{self._prefix}-asg-web-app",
             vpc=props.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnet_type=ec2.SubnetType.PUBLIC
-            ),
+            vpc_subnets=subnets,
             min_capacity=props.min_capacity,
             max_capacity=props.max_capacity,
             desired_capacity=props.desired_capacity,
@@ -227,13 +186,10 @@ class WebAsg(Construct):
             props = self.props
 
         self._instance_role = self._create_instance_role()
-        self._create_instance_profile = self._create_instance_profile([self._instance_role.role_name])
-        self._sg_instance = self._create_securety_group(
-            props.vpc, port=8080, allow_ip_addresses=[get_my_external_ip(), props.vpc.vpc_cidr_block])
+
         self._launch_template = self._create_asg_template(
             iam_role=self._instance_role
-            # , instance_profile=self._create_instance_profile
-            , securety_group=self._sg_instance
+            , securety_group=props.sg
             , instance_type=props.instance_type
             , ami_image=props.ami_image
         )
@@ -243,7 +199,8 @@ class WebAsg(Construct):
             props,
             mixed_instances_policy=self._mixed_instances_policy,
             launch_template=self._launch_template,
-            securety_group=self._sg_instance
+            securety_group=props.sg,
+            subnets=props.subnets
         )
 
     def __init__(

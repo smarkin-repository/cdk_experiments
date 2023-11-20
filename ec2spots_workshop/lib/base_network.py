@@ -56,16 +56,17 @@ class BaseNetworkEnv(Construct):
             self, id: str, 
             prefix: str, 
             cidr_block: str,
+            natgw: bool,
             properties: dict ) -> ec2.Vpc:
         return ec2.Vpc(
             self, id,
-            vpc_name=f"{prefix}-workshop-vpc",
+            vpc_name=f"{prefix}-vpc",
             ip_addresses=ec2.IpAddresses.cidr(cidr_block),
             max_azs=3,
             create_internet_gateway=properties.get("create_internet_gateway", False),
             enable_dns_hostnames=properties.get("enable_dns_hostnames", False),
             enable_dns_support=properties.get("enable_dns_support", False),
-            nat_gateways=0,
+            nat_gateways=1 if natgw is True else 0,
             subnet_configuration=[
                 ec2.SubnetConfiguration(
                     name=f"{prefix}-public-subnet",
@@ -163,7 +164,7 @@ class BaseNetworkEnv(Construct):
             self, id,
             vpc=self._vpc,
             internet_facing=internet_facing,
-            load_balancer_name=f"{prefix}-workshop-alb",
+            load_balancer_name=f"{prefix}-alb",
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
         )
 
@@ -173,19 +174,49 @@ class BaseNetworkEnv(Construct):
             self._vpc.vpc_default_security_group,
             mutable=False
         )
-
-    def create_ssm_endpoint(self):
-        ec2.InterfaceVpcEndpoint(
-            self, f"{self._prefix.upper()}-VPC-SSM-Endpoint",
-            vpc=self._vpc,
-            service=ec2.InterfaceVpcEndpointService(f"com.amazonaws.{self._props.region}.ssm", 443),
-            # Choose which availability zones to place the VPC endpoint in, based on
-            # available AZs
-            subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-            security_groups=[self.sg_default]
+    
+    def create_securety_group(self, name, ports, allow_ip_addresses,  vpc=None):
+        if vpc is None:
+            vpc = self.vpc
+        
+        sg = ec2.SecurityGroup(
+            self, f"{self._prefix.upper()}-{name}",
+            vpc=vpc,
+            allow_all_outbound=True,
+            security_group_name=f"{self._prefix}-{name}"
         )
+        for ip_address in allow_ip_addresses:
+            for port in ports:
+                sg.add_ingress_rule(
+                    peer=ec2.Peer.ipv4(ip_address),
+                    connection=ec2.Port.tcp(port)
+                )
+        return sg
+    
+    def create_endpoints(
+            self, 
+            service_names:list, 
+            subnets:ec2.SubnetSelection, 
+            securety_groups:list=None):
+        """
+            create endpoints for services
+            list of service take a look here https://docs.aws.amazon.com/vpc/latest/privatelink/aws-services-privatelink-support.html
+        """
+        if securety_groups is None:
+            securety_groups = [self.sg_default]
 
-    def create_vpc(self):
+        for service_name in service_names:
+            ec2.InterfaceVpcEndpoint(
+                self, f"{self._prefix.upper()}-{service_name.upper()}-Endpoint",
+                vpc=self._vpc,
+                service=ec2.InterfaceVpcEndpointService(f"com.amazonaws.{self._props.region}.{service_name}"),
+                # Choose which availability zones to place the VPC endpoint in, based on
+                # available AZs
+                subnets=subnets,
+                security_groups=securety_groups
+            )
+
+    def create_vpc(self, is_natgw: bool=False):
         """
         Create VPC with 2 subnets: 2 public and 1 private.
         """
@@ -194,8 +225,11 @@ class BaseNetworkEnv(Construct):
             id=f"{self._prefix.upper()}-VPC",
             prefix=self._prefix,
             cidr_block=self._props.cidr_block,
+            natgw=is_natgw,
             properties=self._props.propertis
         )
+        self.sg_default = self.get_SG_default(id=f"{self._prefix.upper()}-SG-Default")
+        return self._vpc
 
     # TODO replace hardcoded values with props
     def create_alb_with_connect_https_to(self, asg, port, port_target, internet_facing=True):
@@ -250,5 +284,3 @@ class BaseNetworkEnv(Construct):
         super().__init__(scope, construct_id, **kwargs)
         self._prefix = props.prefix
         self._props = props
-        self.create_vpc()
-        self.sg_default = self.get_SG_default(id=f"{self._prefix.upper()}-SG-Default")

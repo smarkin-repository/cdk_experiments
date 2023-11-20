@@ -18,6 +18,8 @@ class WebAsgProps:
     record_name: str=None
     env: core.Environment=None
     data_path: str=None
+    subnets: core.aws_ec2.SubnetSelection=None
+    sg: core.aws_ec2.SecurityGroup=None
 
 @dataclass
 class EC2Props:

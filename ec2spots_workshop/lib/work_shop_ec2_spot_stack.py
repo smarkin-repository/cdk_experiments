@@ -45,9 +45,27 @@ class WorkshopWebAsgStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
         props.account = self.account
         props.region = self.region
+        # [WARNING] aws-cdk-lib.aws_ec2.SubnetType#PRIVATE_WITH_NAT is deprecated.
+        subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)
         base_env = BaseNetworkEnv(self, f"{props.prefix}-base-network-env", props)
-        base_env.create_ssm_endpoint()
+        base_env.create_vpc(is_natgw=True)
+        base_env.create_endpoints(
+            service_names=[
+                "ssm",
+                "ec2messages",
+                "ssmmessages"
+            ],
+            subnets=subnets
+        )
+
         props.vpc = base_env.vpc
+        props.subnets = subnets
+        props.sg = base_env.create_securety_group(
+            name = "sg-asg-hosts",
+            ports=[443, 8080, 3389], 
+            allow_ip_addresses=[props.vpc.vpc_cidr_block, get_my_external_ip()]
+            # allow_ip_addresses=[props.vpc.vpc_cidr_block]
+        )
         self._web_asg = WebAsg(self, f"{props.prefix}-web-asg-stack", props )
         self._web_asg.create_asg()
         base_env.create_alb_with_connect_https_to(
@@ -64,6 +82,26 @@ class WorkshopWebAsgStack(Stack):
         )
         # The code that defines your stack goes here
 
+class WorkshopEnvStask(Stack):
+    @property
+    def vpc(self):
+        return self._base_env.vpc
+
+    def __init__(self, scope: Construct, construct_id: str, props: ECSProps, **kwargs) -> None:
+        super().__init__(scope, construct_id, **kwargs)
+        props.account = self.account
+        props.region = self.region
+        self._base_env = BaseNetworkEnv(self, f"{props.prefix}-base-network-env", props)
+        self._base_env.create_endpoints(
+            service_names=[
+                "ecs",
+                "ecs-agent",
+                "ssm",
+                "ecr.dkr"
+            ],
+            subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
+        )
+
 
 class WorkshopECSStack(Stack):
     """
@@ -75,35 +113,42 @@ class WorkshopECSStack(Stack):
     - EC2 Launch template with necessary ECS config for bootstrapping the instances into the ECS cluster
     - ECR Repository
     """
-    
+    # TODO fix deletion EC2, the instance attached to public IP
+    # devide on two stack: cluster and capasity
     def __init__(
         self, scope: Construct, construct_id: str, props: ECSProps, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         props.account = self.account
         props.region = self.region
         # 1 VPC with 2 subnets; 1 public and 1 private subnets
-        base_env = BaseNetworkEnv(self, f"{props.prefix}-base-network-env", props)
-        base_env.create_ssm_endpoint()
+        # look at WorkshopEnvStack
+        # TODO find another way to provide VPC
+        _vpc = props.vpc
         # EC2 Launch template with necessary ECS config for bootstrapping the instances into the ECS cluster
         ecs = ECS(self, f"{props.prefix}-ecs-stack", props )
-        _asg = ecs.create_asg(vpc=base_env.vpc)
-        ecs.create_cluster(
-            vpc=base_env.vpc,
+        _asg = ecs.create_asg(vpc=_vpc)
+        cluster = ecs.create_cluster(
+            vpc=_vpc,
             autoscaling_group=_asg
         )
-        service = ecs.create_service()
-        # Application Load Balancer (ALB) with its own security group
-        # Target Group and an ALB listener
-        base_env.create_alb_with_connect_https_to(
-            target=service,
-            port=443,
-            port_target=80,
-            internet_facing=True
-        )
-        route53 = R53(self, f"{props.prefix}-route53", props.prefix)
-        route53.create_arecord(
-            domain_name=props.domain_name,
-            record_name=props.record_name,
-            target=base_env.alb
-        )
+        # FIXME  поскольку кластре иззалирован то надо либо дать доступ в интерент publicIP 
+        # либо пробросить доступ к ECR и туда положить образ
+        # TODO prepare image and publis on ECR
+        # TODO change creation service to get images from ECR
+        
+        # service = ecs.create_service(cluster, "ecs-simple")
+        # # Application Load Balancer (ALB) with its own security group
+        # # Target Group and an ALB listener
+        # base_env.create_alb_with_connect_https_to(
+        #     target=service,
+        #     port=443,
+        #     port_target=80,
+        #     internet_facing=True
+        # )
+        # route53 = R53(self, f"{props.prefix}-route53", props.prefix)
+        # route53.create_arecord(
+        #     domain_name=props.domain_name,
+        #     record_name=props.record_name,
+        #     target=base_env.alb
+        # )
         # ? Cloud9 Environment and its IAM Role 
