@@ -171,3 +171,5 @@ cdk.context.json
 .cdk.staging
 cdk.out
 node_modules
+package-lock.json
+package.json
