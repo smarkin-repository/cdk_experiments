@@ -9,6 +9,7 @@ from .work_shop_ec2_spot_stack import (
     WorkshopEC2SpotStack
     , WorkshopWebAsgStack
     , WorkshopECSStack
+    , WorkshopEnvStask
 
 )
 
@@ -23,6 +24,7 @@ __all__ = [
     'ttl_termination_stack_factory',
     'WorkshopEC2SpotStack',
     'WorkshopWebAsgStack',
-    'WorkshopECSStack'
+    'WorkshopECSStack',
+    'WorkshopEnvStask'
     'R53'
 ]

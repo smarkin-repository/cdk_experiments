@@ -9,6 +9,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../../../../ec2spots_wo
 from lib import ( 
     ECSProps
     , WorkshopECSStack
+    , WorkshopEnvStask
     , ttl_termination_stack_factory
     , TTLProps
     , utils
@@ -41,7 +42,7 @@ ami_image = utils.get_latest_linux_ami_from_aws(
 
 prefix = "workshop"
 
-web_props = ECSProps(
+ecs_props = ECSProps(
     prefix=prefix
     , cidr_block="172.30.0.0/24"
     , propertis={
@@ -63,13 +64,23 @@ web_props = ECSProps(
     , data_path="../data/"
 )
 
-test_stack = WorkshopECSStack(
+
+env_stack = WorkshopEnvStask(
+    app, f"{prefix.capitalize()}-Env-Stack"
+    , props=ecs_props
+    , env=env
+)
+stacks.append(env_stack)
+
+ecs_props.vpc = env_stack.vpc
+ecs_stack = WorkshopECSStack(
     app, f"{prefix.capitalize()}-ECS-Stack"
-    , props=web_props
+    , props=ecs_props
     , env = env
 )
-# test_stack.add_assets()
-stacks.append(test_stack)
+ecs_stack.add_dependency(env_stack)
+stacks.append(ecs_stack)
+
 
 # create and fill TTLProps
 ttl_props = TTLProps(
@@ -85,7 +96,7 @@ ttl_stack = ttl_termination_stack_factory(
     env=env
 
 )
-ttl_stack.add_dependency(test_stack)
+ttl_stack.add_dependency(ecs_stack)
 stacks.append(ttl_stack)
 
 utils.add_tags(stacks, tags)

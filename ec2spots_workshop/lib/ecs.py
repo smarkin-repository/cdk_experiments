@@ -1,6 +1,7 @@
 import aws_cdk as core
 from aws_cdk import (
     Stack,
+    aws_ecr as ecr,
     aws_ecs as ecs,
     aws_s3 as s3, 
     aws_ecs_patterns as ecs_patterns, 
@@ -53,12 +54,13 @@ class ECS(Construct):
         )
         return instance_profile
     
-    def _create_launch_template(self, securety_group, iam_role, image=None):
+    def _create_launch_template(self, securety_group, iam_role, instance_type, image=None):
         return ec2.LaunchTemplate(self, "ASG-LaunchTemplate",
-            instance_type=ec2.InstanceType("t3.small"),
+            instance_type=instance_type,
             machine_image=image,
             role=iam_role,
             security_group=securety_group,
+            require_imdsv2=True
         )
     
     def _create_securety_group(self, vpc, allow_cidr_blocks ):
@@ -73,6 +75,64 @@ class ECS(Construct):
                 peer=ec2.Peer.ipv4(ip_address),
                 connection=ec2.Port.all_tcp()
             )
+    def _create_task_definition(self, network_mode=ecs.NetworkMode.BRIDGE) -> ecs.Ec2TaskDefinition:
+        """
+            create a task definition for ECS cluster
+        """
+        task_definition = ecs.Ec2TaskDefinition(
+            self, f"{self._prefix.capitalize()}-TaskDefinition",
+            network_mode=network_mode
+        )
+        return task_definition
+
+    def _create_service(self, cluster, task_definition, container_name):
+        return ecs.Ec2Service(
+            self, f"{self._prefix.capitalize()}-Service",
+            cluster=cluster,
+            task_definition=task_definition,
+            desired_count=1,
+            # assign_public_ip=True,
+            # cloud_map_options=ecs.CloudMapOptions(
+            #     cloud_map_namespace=ecs.PrivateDnsNamespace(
+            #         self, f"{self._prefix.capitalize()}-PrivateDnsNamespace",
+            #         name=f"{self._prefix}-private-dns-namespace",
+            #         vpc=cluster.vpc,
+            #         description="Private DNS Namespace for ECS Cluster"
+            #     ),
+            #     name=container_name,
+            #     cloud_map_service_type=ecs.CloudMapServiceType.HTTP
+            # )
+        )
+
+    def _asset_user_data(self, asg, instance_role, script_paths: List[str]):
+        """
+        Create an asset for each script in the list
+        """
+        assets = []
+        for script_path in script_paths:
+            asset = Asset.Asset(
+                self, f"{self._prefix}-asset",
+                path=script_path
+            )
+
+        local_path = asg.user_data.add_s3_download_command(
+            bucket=asset.bucket,
+            bucket_key=asset.s3_object_key
+        )
+
+        assets.append(asset)
+
+        # Add commands to execute downloaded scripts
+        for asset in assets:
+            asg.user_data.add_execute_file_command(
+                file_path=local_path
+            )
+
+        # Grant read permissions for all assets to the instance role
+        for asset in assets:
+            asset.grant_read(instance_role)
+
+        return assets
 
     def create_asg(self, vpc, iam_role=None, allow_ip_addresses=None):
         securety_group = self._create_securety_group(
@@ -81,14 +141,19 @@ class ECS(Construct):
         )
         role = self._create_instance_role()
         launch_template = self._create_launch_template(
-            securety_group, iam_role=role, image=ecs.EcsOptimizedImage.amazon_linux2())
-        return asg.AutoScalingGroup(self, f"{self._prefix.capitalize}-ASG",
+            securety_group, 
+            iam_role=role, 
+            instance_type=ec2.InstanceType("t3.media"), 
+            image=ecs.EcsOptimizedImage.amazon_linux2()
+        )
+        _asg = asg.AutoScalingGroup(self, f"{self._prefix.capitalize}-ASG",
             vpc=vpc,
             auto_scaling_group_name=f"{self._prefix}-ecs-spots",
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-            min_capacity=1,
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
+            min_capacity=0,
             max_capacity=3,
             desired_capacity=1,
+            new_instances_protected_from_scale_in=False,
             mixed_instances_policy=asg.MixedInstancesPolicy(
                 instances_distribution=asg.InstancesDistribution(
                     on_demand_percentage_above_base_capacity=0,
@@ -99,65 +164,50 @@ class ECS(Construct):
                 ),
                 launch_template=launch_template,
                 launch_template_overrides=[
-                    asg.LaunchTemplateOverrides(instance_type=ec2.InstanceType("t3.small")),
-                    asg.LaunchTemplateOverrides(instance_type=ec2.InstanceType("t4g.small")),
+                    asg.LaunchTemplateOverrides(instance_type=ec2.InstanceType("t3.medium")),
+                    asg.LaunchTemplateOverrides(instance_type=ec2.InstanceType("t4g.medium")),
                 ]
             )
         )
+
+        script_paths=[]
+        script_paths.append(
+            os.path.join(dirname, f"{self._props.data_path}/scripts/user_data_ecs.sh"))
+        self._asset_user_data(_asg, role, script_paths)
+        return _asg
 
     def create_cluster(self, vpc, autoscaling_group):
         _cluster = ecs.Cluster(self, f"{self._prefix.capitalize()}-Cluster", vpc=vpc)
     
         capacity_provider = ecs.AsgCapacityProvider(
             self, f"{self._prefix.capitalize()}-AsgCapacityProvider",
-            auto_scaling_group=autoscaling_group
+            auto_scaling_group=autoscaling_group,
+            enable_managed_termination_protection=False,
+            enable_managed_scaling=True
         )
         _cluster.add_asg_capacity_provider(capacity_provider)
         return _cluster
     
     def create_service(self, cluster, container_name):
         # Create Task Definition
-        task = ecs._create_task_definition()
-        container = ecs.add_container_definition(task)
+        task = self._create_task_definition()
+
+        # ecr_repo = ecr.Repository.from_repository_name("")
+        # tag = "latest"
+        # image = ecs.ContainerImage.from_ecr_repository(ecr_repo, tag)
+        # public.ecr.aws/ecs-sample-image/amazon-ecs-sample:latest тоже ходит через интерент
+        # надо отдельно тестировать доступ к ECR
+
+        task.add_container(
+            container_name, 
+            image=ecs.ContainerImage.from_registry("public.ecr.aws/ecs-sample-image/amazon-ecs-sample:latest"),
+            # image=image,
+            memory_limit_mib=256,
+            cpu=256,
+            port_mappings=[ecs.PortMapping(container_port=80, host_port=8080)]
+        )
         # Create Service
-        service = ecs.create_service(cluster, task)
-
-# // Create Task Definition
-# const taskDefinition = new ecs.Ec2TaskDefinition(stack, 'TaskDef');
-# const container = taskDefinition.addContainer('web', {
-#   image: ecs.ContainerImage.fromRegistry("amazon/amazon-ecs-sample"),
-#   memoryLimitMiB: 256,
-# });
-
-# container.addPortMappings({
-#   containerPort: 80,
-#   hostPort: 8080,
-#   protocol: ecs.Protocol.TCP
-# });
-
-# // Create Service
-# const service = new ecs.Ec2Service(stack, "Service", {
-#   cluster,
-#   taskDefinition,
-# });
-
-        # return ecs.Ec2Service(
-        #     self, f"{self._prefix.capitalize()}-Service",
-        #     cluster=cluster,
-        #     task_definition=task_definition,
-        #     desired_count=1,
-        #     assign_public_ip=True,
-        #     cloud_map_options=ecs.CloudMapOptions(
-        #         cloud_map_namespace=ecs.PrivateDnsNamespace(
-        #             self, f"{self._prefix.capitalize()}-PrivateDnsNamespace",
-        #             name=f"{self._prefix}-private-dns-namespace",
-        #             vpc=cluster.vpc,
-        #             description="Private DNS Namespace for ECS Cluster"
-        #         ),
-        #         name=container_name,
-        #         cloud_map_service_type=ecs.CloudMapServiceType.HTTP
-        #     )
-        # )
+        return self._create_service(cluster, task, container_name)
 
     def __init__(
             self,
