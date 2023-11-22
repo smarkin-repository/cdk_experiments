@@ -41,13 +41,17 @@ class WorkshopWebAsgStack(Stack):
     def add_assets(self):
         self._web_asg.asset_user_data()
     
-    def __init__(self, scope: Construct, construct_id: str, props: WebAsgProps, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, prefix: str, props: WebAsgProps, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-        props.account = self.account
-        props.region = self.region
         # [WARNING] aws-cdk-lib.aws_ec2.SubnetType#PRIVATE_WITH_NAT is deprecated.
         subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)
-        base_env = BaseNetworkEnv(self, f"{props.prefix}-base-network-env", props)
+        base_env = BaseNetworkEnv(
+            self, f"{props.prefix}-base-network-env",
+            prefix=prefix,
+            props=props,
+            region=self.region,
+            account=self.account
+        )
         base_env.create_vpc(is_natgw=True)
         base_env.create_endpoints(
             service_names=[
@@ -85,13 +89,21 @@ class WorkshopWebAsgStack(Stack):
 class WorkshopEnvStask(Stack):
     @property
     def vpc(self):
-        return self._base_env.vpc
+        return self._vpc
+    
+    @property
+    def sg(self):
+        return self._sg
 
-    def __init__(self, scope: Construct, construct_id: str, props: ECSProps, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, prefix: str, props, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-        props.account = self.account
-        props.region = self.region
-        self._base_env = BaseNetworkEnv(self, f"{props.prefix}-base-network-env", props)
+        self._prefix = prefix
+        self._base_env = BaseNetworkEnv(
+            self, f"{self._prefix}-base-network-env", 
+            prefix=self._prefix,
+            props=props, 
+            region=self.region, account=self.account)
+        self._vpc = self._base_env.create_vpc(is_natgw=True)
         self._base_env.create_endpoints(
             service_names=[
                 "ecs",
@@ -99,7 +111,13 @@ class WorkshopEnvStask(Stack):
                 "ssm",
                 "ecr.dkr"
             ],
-            subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
+            subnets=props.subnets
+        )
+        self._sg = self._base_env.create_securety_group(
+            name = "sg-asg-hosts",
+            ports=[443, 8080, 3389], 
+            allow_ip_addresses=[props.cidr_block, get_my_external_ip()]
+            # allow_ip_addresses=[props.vpc.vpc_cidr_block]
         )
 
 
@@ -116,22 +134,25 @@ class WorkshopECSStack(Stack):
     # TODO fix deletion EC2, the instance attached to public IP
     # devide on two stack: cluster and capasity
     def __init__(
-        self, scope: Construct, construct_id: str, props: ECSProps, **kwargs) -> None:
+        self, scope: Construct, construct_id: str, prefix: str, props: ECSProps, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-        props.account = self.account
-        props.region = self.region
+        self._prefix = prefix
         # 1 VPC with 2 subnets; 1 public and 1 private subnets
         # look at WorkshopEnvStack
         # TODO find another way to provide VPC
-        _vpc = props.vpc
+        _vpc = props.vpc_props.vpc
         # EC2 Launch template with necessary ECS config for bootstrapping the instances into the ECS cluster
-        ecs = ECS(self, f"{props.prefix}-ecs-stack", props )
+        ecs = ECS(
+            self, f"{self._prefix}-ecs-stack", 
+            prefix=self._prefix, 
+            props=props.cluster_props 
+        )
         _asg = ecs.create_asg(vpc=_vpc)
         cluster = ecs.create_cluster(
             vpc=_vpc,
             autoscaling_group=_asg
         )
-        # FIXME  поскольку кластре иззалирован то надо либо дать доступ в интерент publicIP 
+        # FIXME Нет доступа к ECR. Поскольку кластре иззалирован то надо либо дать доступ в интерент publicIP 
         # либо пробросить доступ к ECR и туда положить образ
         # TODO prepare image and publis on ECR
         # TODO change creation service to get images from ECR

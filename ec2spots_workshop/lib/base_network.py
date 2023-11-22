@@ -209,7 +209,7 @@ class BaseNetworkEnv(Construct):
             ec2.InterfaceVpcEndpoint(
                 self, f"{self._prefix.upper()}-{service_name.upper()}-Endpoint",
                 vpc=self._vpc,
-                service=ec2.InterfaceVpcEndpointService(f"com.amazonaws.{self._props.region}.{service_name}"),
+                service=ec2.InterfaceVpcEndpointService(f"com.amazonaws.{self.region}.{service_name}"),
                 # Choose which availability zones to place the VPC endpoint in, based on
                 # available AZs
                 subnets=subnets,
@@ -279,8 +279,13 @@ class BaseNetworkEnv(Construct):
             self,
             scope: Construct,
             construct_id: str,
+            prefix,
             props ,
+            region,
+            account,
             **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-        self._prefix = props.prefix
+        self._prefix = prefix
+        self.region = region
+        self.account = account
         self._props = props

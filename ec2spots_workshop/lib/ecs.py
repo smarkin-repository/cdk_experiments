@@ -12,7 +12,7 @@ from aws_cdk import (
     aws_s3_assets as Asset
 )
 from constructs import Construct
-from .props import ECSProps
+from .props import ECSProps, ClusterProps
 from .utils import get_my_external_ip, get_latest_linux_ami_from_aws
 
 import os
@@ -213,10 +213,11 @@ class ECS(Construct):
             self,
             scope: Construct,
             construct_id: str,
-            props: ECSProps,
+            prefix: str,
+            props: ClusterProps,
             **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-        self._prefix = props.prefix
+        self._prefix = prefix
         self._props = props
 
         

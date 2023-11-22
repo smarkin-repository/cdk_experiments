@@ -73,6 +73,7 @@ web_props = WebAsgProps(
 
 test_stack = WorkshopWebAsgStack(
     app, f"{prefix.upper()}-WebASGStack"
+    , prefix=prefix
     , props=web_props
     , env = env
 )

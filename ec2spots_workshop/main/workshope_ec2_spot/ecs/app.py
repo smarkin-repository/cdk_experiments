@@ -8,6 +8,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../../../../ec2spots_wo
 
 from lib import ( 
     ECSProps
+    , VPCProps
+    , ClusterProps
+    , R53Props
     , WorkshopECSStack
     , WorkshopEnvStask
     , ttl_termination_stack_factory
@@ -30,51 +33,59 @@ tags = {
 }
 
 app = core.App()
-
-ami_image = utils.get_latest_linux_ami_from_aws(
-    region=env.region
-    , pattern={
-            "owner" : "amazon",
-            "architecture" : "x86_64",
-            "name" : "amzn2-ami-hvm-*"
-    }
-)
-
 prefix = "workshop"
 
 ecs_props = ECSProps(
-    prefix=prefix
-    , cidr_block="172.30.0.0/24"
-    , propertis={
-        "create_internet_gateway":True,
-        "enable_dns_hostnames":True,
-        "enable_dns_support":True,
-    }
-    , instance_type="t3.small"
-    , spot_types=[
-        "t3.small"
-        ,"t4g.small"
-    ]
-    , min_capacity=1
-    , max_capacity=2
-    , desired_capacity=1
-    , ami_image=ami_image
-    , domain_name="taloni.link"
-    , record_name="test"
-    , data_path="../data/"
+    env=env
+    , vpc_props=VPCProps(
+        cidr_block="172.30.0.0/24"
+        , subnets=core.aws_ec2.SubnetSelection(subnet_type=core.aws_ec2.SubnetType.PRIVATE_WITH_EGRESS)
+        , propertis={
+            "create_internet_gateway":True,
+            "enable_dns_hostnames":True,
+            "enable_dns_support":True,
+        }
+    )
+    , cluster_props=ClusterProps(
+        instance_type="t3.small"
+        , spot_types=[
+            "t3.small"
+            ,"t4g.small"
+        ]
+        , min_capacity=1
+        , max_capacity=2
+        , desired_capacity=1
+        , ami_image=utils.get_latest_linux_ami_from_aws(
+            region=env.region
+            , pattern={
+                "owner" : "amazon",
+                "architecture" : "x86_64",
+                "name" : "amzn2-ami-hvm-*"
+            }
+        )
+        , data_path="../data/"
+    )
+    , r53_props=R53Props(
+        domain_name="taloni.link"
+        , record_name="test"
+    )
 )
 
 
 env_stack = WorkshopEnvStask(
     app, f"{prefix.capitalize()}-Env-Stack"
-    , props=ecs_props
+    , prefix=prefix 
+    , props=ecs_props.vpc_props
     , env=env
 )
 stacks.append(env_stack)
 
-ecs_props.vpc = env_stack.vpc
+ecs_props.vpc_props.vpc = env_stack.vpc
+ecs_props.vpc_props.alb_sg = env_stack.sg
+
 ecs_stack = WorkshopECSStack(
     app, f"{prefix.capitalize()}-ECS-Stack"
+    , prefix=prefix 
     , props=ecs_props
     , env = env
 )
