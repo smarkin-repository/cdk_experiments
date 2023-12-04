@@ -1,6 +1,11 @@
+"""
+    Props for stacks
+"""
+
 import aws_cdk as core
 from dataclasses import dataclass
 from typing import List, Dict
+from .ecs import ECS
 
 @dataclass
 class WebAsgProps:
@@ -30,12 +35,18 @@ class EC2Props:
     ami_image: str
 
 @dataclass
-class VPCProps:
+class EnvProps:
     cidr_block: str
     vpc: core.aws_ec2.Vpc=None
-    subnets: core.aws_ec2.SubnetSelection=None
+    max_avz: int=3
+    endpoints : List=None
+    endpoint_subnets: core.aws_ec2.SubnetSelection=None
     propertis: Dict=None
     alb_sg: core.aws_ec2.SecurityGroup=None
+    alb_internet_facing: bool=False
+    domain_name: str=None
+    hosted_zone_id: str=None
+    record_name: str=None
 
 @dataclass
 class ClusterProps:
@@ -46,16 +57,18 @@ class ClusterProps:
     desired_capacity: int=0
     ami_image: str=None
     data_path: str=None
+    vpc: core.aws_ec2.Vpc=None
+    alb: core.aws_elasticloadbalancingv2.ApplicationLoadBalancer=None
+    subnets: core.aws_ec2.SubnetSelection=None
+    ecs: ECS=None
+    asg: core.aws_autoscaling.AutoScalingGroup=None
+    cluster: core.aws_ecs.Cluster=None
+    acm_cert: core.aws_certificatemanager.Certificate=None
 
-@dataclass
-class R53Props:
-    domain_name: str=None
-    record_name: str=None
 
 @dataclass
 class ECSProps:
     env: core.Environment=None
-    vpc_props: VPCProps=None
+    env_props: EnvProps=None
     cluster_props: ClusterProps=None
-    r53_props: R53Props=None
     

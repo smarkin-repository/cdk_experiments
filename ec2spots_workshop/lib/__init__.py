@@ -1,7 +1,6 @@
-from .base_network import BaseNetworkEnv
+from .base_network import BaseNetwork
 from .ec2_spot import EC2Spot, EC2Props
-from .props import WebAsgProps, ECSProps, R53Props, VPCProps, ClusterProps
-from .route53 import R53
+from .props import WebAsgProps, ECSProps, EnvProps, ClusterProps
 from .ttl import TTLProps, ttl_termination_stack_factory
 from .web_asg import WebAsg
 from .utils import *
@@ -10,22 +9,23 @@ from .work_shop_ec2_spot_stack import (
     , WorkshopWebAsgStack
     , WorkshopECSStack
     , WorkshopEnvStask
-
+    , WorkshopServiceStack
 )
 
 __all__ = [
-    'BaseNetworkEnv',
+    'BaseNetwork',
     'EC2Spot',
     'EC2Props',
     'WebAsg',
     'WebAsgProps',
     'ECSProps',
-    'R53Props', 'VPCProps', 'ClusterProps',
+    'EnvProps', 'ClusterProps',
     'TTLProps',
     'ttl_termination_stack_factory',
     'WorkshopEC2SpotStack',
     'WorkshopWebAsgStack',
     'WorkshopECSStack',
-    'WorkshopEnvStask'
+    'WorkshopEnvStask',
+    'WorkshopServiceStack',
     'R53'
 ]

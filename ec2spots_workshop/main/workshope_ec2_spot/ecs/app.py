@@ -8,11 +8,11 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../../../../ec2spots_wo
 
 from lib import ( 
     ECSProps
-    , VPCProps
+    , EnvProps
     , ClusterProps
-    , R53Props
     , WorkshopECSStack
     , WorkshopEnvStask
+    , WorkshopServiceStack
     , ttl_termination_stack_factory
     , TTLProps
     , utils
@@ -37,17 +37,29 @@ prefix = "workshop"
 
 ecs_props = ECSProps(
     env=env
-    , vpc_props=VPCProps(
+    , env_props=EnvProps(
         cidr_block="172.30.0.0/24"
-        , subnets=core.aws_ec2.SubnetSelection(subnet_type=core.aws_ec2.SubnetType.PRIVATE_WITH_EGRESS)
+        , endpoints = [
+                "ecs",
+                "ecs-agent",
+                "ssm",
+                "ecr.dkr"
+            ]
+        , max_avz=2
+        , endpoint_subnets=core.aws_ec2.SubnetSelection(subnet_type=core.aws_ec2.SubnetType.PRIVATE_WITH_EGRESS)
         , propertis={
             "create_internet_gateway":True,
             "enable_dns_hostnames":True,
             "enable_dns_support":True,
         }
+        , alb_internet_facing=True
+        , domain_name="taloni.link"
+        , hosted_zone_id="Z0764436UNSJQPH92RK7"
+        , record_name="test"
     )
     , cluster_props=ClusterProps(
-        instance_type="t3.small"
+        subnets = core.aws_ec2.SubnetSelection(subnet_type=core.aws_ec2.SubnetType.PRIVATE_WITH_EGRESS)
+        , instance_type="t3.small"
         , spot_types=[
             "t3.small"
             ,"t4g.small"
@@ -63,11 +75,7 @@ ecs_props = ECSProps(
                 "name" : "amzn2-ami-hvm-*"
             }
         )
-        , data_path="../data/"
-    )
-    , r53_props=R53Props(
-        domain_name="taloni.link"
-        , record_name="test"
+        , data_path="../../../data/scripts"
     )
 )
 
@@ -75,22 +83,45 @@ ecs_props = ECSProps(
 env_stack = WorkshopEnvStask(
     app, f"{prefix.capitalize()}-Env-Stack"
     , prefix=prefix 
-    , props=ecs_props.vpc_props
+    , props=ecs_props.env_props
     , env=env
 )
 stacks.append(env_stack)
 
-ecs_props.vpc_props.vpc = env_stack.vpc
-ecs_props.vpc_props.alb_sg = env_stack.sg
+ecs_props.cluster_props.vpc = env_stack.vpc
+ecs_props.cluster_props.alb = env_stack.alb
+ecs_props.cluster_props.acm_cert = env_stack.acm_cert
 
 ecs_stack = WorkshopECSStack(
-    app, f"{prefix.capitalize()}-ECS-Stack"
+    app, f"{prefix.capitalize()}-Ecs-Stack"
     , prefix=prefix 
     , props=ecs_props
     , env = env
 )
+
 ecs_stack.add_dependency(env_stack)
 stacks.append(ecs_stack)
+
+# provide propertices of ecs_stack as 
+#  - asg
+#  - cluster
+#  - ecs 
+#  - acm_cert
+# to cluster_props
+
+ecs_props.cluster_props.asg = ecs_stack.asg
+ecs_props.cluster_props.cluster = ecs_stack.cluster
+ecs_props.cluster_props.ecs = ecs_stack.ecs
+
+service_stack = WorkshopServiceStack(
+    app, f"{prefix.capitalize()}-Service-Stack"
+    , prefix=prefix
+    , props=ecs_props.cluster_props
+    , env=env
+)
+
+# service_stack.add_dependency(ecs_stack)
+stacks.append(service_stack)
 
 
 # create and fill TTLProps
@@ -107,7 +138,7 @@ ttl_stack = ttl_termination_stack_factory(
     env=env
 
 )
-ttl_stack.add_dependency(ecs_stack)
+
 stacks.append(ttl_stack)
 
 utils.add_tags(stacks, tags)

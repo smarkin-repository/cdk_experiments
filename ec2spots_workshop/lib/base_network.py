@@ -1,16 +1,9 @@
 import aws_cdk as core
 from aws_cdk import (
-    Stack,
     Duration,
     aws_route53 as route53,
-    aws_s3 as s3, 
     aws_ec2 as ec2, 
-    aws_kms as kms, 
-    aws_iam as iam,
     aws_certificatemanager as acm,
-    aws_autoscaling as asg,
-    custom_resources as cr, 
-    aws_s3_assets as Asset,
     aws_elasticloadbalancingv2 as elbv2
 )
 from constructs import Construct
@@ -19,12 +12,11 @@ from dataclasses import dataclass
 import os
 import time
 import logging
-import boto3
 
-from operator import itemgetter
 from typing import List, Dict
 from .utils import get_my_external_ip
-
+from .aws_framework import AWSFramework
+from .props import EnvProps
 
 
 logging.basicConfig(level=logging.INFO)
@@ -36,7 +28,7 @@ dirname = os.path.dirname(__file__)
 def upper_string(string: str) -> str:
     return string.upper()
 
-class BaseNetworkEnv(Construct):
+class BaseNetwork(Construct):
     
     @property
     def vpc(self):
@@ -56,13 +48,14 @@ class BaseNetworkEnv(Construct):
             self, id: str, 
             prefix: str, 
             cidr_block: str,
+            max_azs: int,
             natgw: bool,
             properties: dict ) -> ec2.Vpc:
         return ec2.Vpc(
             self, id,
             vpc_name=f"{prefix}-vpc",
             ip_addresses=ec2.IpAddresses.cidr(cidr_block),
-            max_azs=3,
+            max_azs=max_azs,
             create_internet_gateway=properties.get("create_internet_gateway", False),
             enable_dns_hostnames=properties.get("enable_dns_hostnames", False),
             enable_dns_support=properties.get("enable_dns_support", False),
@@ -131,23 +124,6 @@ class BaseNetworkEnv(Construct):
             health_check = self._create_health_check_target(port=str(port), path="/")
         )
     
-
-
-    def _create_securety_group_ingress(self, vpc, ports: list, allow_cidrs: list):
-        sg_alb = ec2.SecurityGroup(
-            self, f"{self._prefix.upper()}-SecurityGroup",
-            vpc=vpc,
-            allow_all_outbound=True,
-            security_group_name=f"{self._prefix}-alb-sg"
-        )
-        for port in ports:
-            for ip_address in allow_cidrs:
-                sg_alb.add_ingress_rule(
-                    peer=ec2.Peer.ipv4(ip_address),
-                    connection=ec2.Port.tcp(port)
-                )
-        return sg_alb
-    
     def _create_health_check_target(self, port:str, path:str):
         return elbv2.HealthCheck(
                 interval=Duration.seconds(60),
@@ -156,7 +132,7 @@ class BaseNetworkEnv(Construct):
                 timeout=Duration.seconds(5)
             )
 
-    def _create_alb(self, id:str, prefix:str, internet_facing: bool=False) -> elbv2.ApplicationLoadBalancer:
+    def _create_alb(self, id:str, load_balancer_name:str, vpc_subnets: ec2.SubnetSelection, internet_facing: bool=False) -> elbv2.ApplicationLoadBalancer:
         """
             Create simple application load balancer with AWS SSL certificats
         """
@@ -164,8 +140,8 @@ class BaseNetworkEnv(Construct):
             self, id,
             vpc=self._vpc,
             internet_facing=internet_facing,
-            load_balancer_name=f"{prefix}-alb",
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
+            load_balancer_name=load_balancer_name,
+            vpc_subnets=vpc_subnets
         )
 
     def get_SG_default(self, id):
@@ -174,24 +150,6 @@ class BaseNetworkEnv(Construct):
             self._vpc.vpc_default_security_group,
             mutable=False
         )
-    
-    def create_securety_group(self, name, ports, allow_ip_addresses,  vpc=None):
-        if vpc is None:
-            vpc = self.vpc
-        
-        sg = ec2.SecurityGroup(
-            self, f"{self._prefix.upper()}-{name}",
-            vpc=vpc,
-            allow_all_outbound=True,
-            security_group_name=f"{self._prefix}-{name}"
-        )
-        for ip_address in allow_ip_addresses:
-            for port in ports:
-                sg.add_ingress_rule(
-                    peer=ec2.Peer.ipv4(ip_address),
-                    connection=ec2.Port.tcp(port)
-                )
-        return sg
     
     def create_endpoints(
             self, 
@@ -226,13 +184,14 @@ class BaseNetworkEnv(Construct):
             prefix=self._prefix,
             cidr_block=self._props.cidr_block,
             natgw=is_natgw,
+            max_azs=self._props.max_avz,
             properties=self._props.propertis
         )
         self.sg_default = self.get_SG_default(id=f"{self._prefix.upper()}-SG-Default")
         return self._vpc
 
     # TODO replace hardcoded values with props
-    def create_alb_with_connect_https_to(self, asg, port, port_target, internet_facing=True):
+    def create_alb_with_connect_https_to(self, asg, sg_ports, port_source, port_target, internet_facing=True):
         self._acm_cert = self._create_acm_certificate(
             zone_name="Z0764436UNSJQPH92RK7", #"taloni.link",
             domain_name="test.taloni.link",
@@ -242,11 +201,15 @@ class BaseNetworkEnv(Construct):
             id=f"{self._prefix.upper()}-ALB",
             prefix=self._prefix,
             internet_facing=internet_facing,
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
         )
-        self._sg_alb = self._create_securety_group_ingress(
+        self._sg_alb = self._frame_work.create_securety_group(
+            id=f"{self._prefix}-ALB-SG",
             vpc=self._vpc,
-            ports=[port],
-            allow_cidrs=[self._vpc.vpc_cidr_block, get_my_external_ip()]
+            name=f"{self._prefix}-ALB-SG",
+            description=f"{self._prefix}-ALB-SG",
+            allow_cidrs=[self._vpc.vpc_cidr_block, get_my_external_ip()],
+            ports=sg_ports
         )
 
         self._target_group = self._create_target_group_http_for_asg(
@@ -258,13 +221,13 @@ class BaseNetworkEnv(Construct):
 
         self._alb.add_redirect(
             source_port=80,
-            target_port=port,
+            target_port=port_source,
             source_protocol=elbv2.ApplicationProtocol.HTTP,
             target_protocol=elbv2.ApplicationProtocol.HTTPS,
             open=True
         )
 
-        self._listener = self._create_listener_https(self._alb, port, [self._acm_cert])
+        self._listener = self._create_listener_https(self._alb, port_source, [self._acm_cert])
         
 
         self._listener.add_target_groups(
@@ -274,18 +237,45 @@ class BaseNetworkEnv(Construct):
 
         self._alb.add_security_group(self._sg_alb)
 
+    def create_alb(self, load_balancer_name, sg_alb, subnets, internet_facing=True):
+        alb = self._create_alb(
+            id=f"{self._prefix.capitalize()}-ALB",
+            load_balancer_name=load_balancer_name,
+            internet_facing=internet_facing,
+            vpc_subnets=subnets
+        )
+
+        alb.add_redirect(
+            source_port=80,
+            target_port=443,
+            source_protocol=elbv2.ApplicationProtocol.HTTP,
+            target_protocol=elbv2.ApplicationProtocol.HTTPS,
+            open=True
+        )
+
+        # elbv2.ApplicationListener(
+        #     self, f"{self._prefix.capitalize()}-ALB-Listener",
+        #     load_balancer=alb,
+        #     port=443,
+        #     protocol=elbv2.ApplicationProtocol.HTTPS,
+        #     certificates=acm_certs,
+        # )
+        alb.add_security_group(sg_alb)
+        return alb
+
 
     def __init__(
             self,
             scope: Construct,
             construct_id: str,
             prefix,
-            props ,
-            region,
-            account,
+            props:EnvProps=None,
+            region=None,
+            account=None,
             **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         self._prefix = prefix
         self.region = region
         self.account = account
         self._props = props
+        self._frame_work = AWSFramework(self, f"{self._prefix}-{construct_id}-Framework")
